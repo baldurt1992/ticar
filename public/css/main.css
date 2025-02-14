@@ -1,0 +1,64 @@
+#camara {
+    border: 2px solid black;
+    width: 340px;
+}
+.fecha {
+    font-size: 25px;
+    font-weight: bold;
+}
+.tiempo {
+    font-size: 45px;
+    letter-spacing: 10px;
+}
+.containerA {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-family: Helvetica neue, roboto;
+    width: 100vw;
+}
+
+[v-cloak] {display: none}
+
+.mouse {
+    cursor: pointer;
+}
+
+.modal-dialog {
+    min-height: calc(100vh - 60px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: auto;
+}
+@media(max-width: 768px) {
+    .modal-dialog {
+        min-height: calc(100vh - 20px);
+    }
+}
+
+.card-body {
+    padding: 0 1.875rem;
+}
+
+
+select:required:invalid {
+    color: gray;
+}
+option[value=""][disabled] {
+    display: none;
+}
+option {
+    color: black;
+}
+
+.black {
+    color: #0a0302;
+}
+
+.blackr {
+    text-align: right;
+    color: #0a0302;
+}
