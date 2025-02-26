@@ -51,7 +51,8 @@
                             <tr>
                                 <th scope="col" class="border-0">IP</th>
                                 <th scope="col" class="border-0">Fecha Entra</th>
-                                <th scope="col" class="border-0">Fecha Sale</th>
+                                <th scope="col" class="border-0">Hora Entrada</th>
+                                <th scope="col" class="border-0">Hora Salida</th>
                                 <th scope="col" class="border-0">Division</th>
                                 <th scope="col" class="border-0">Motivo</th>
                                 <th scope="col" class="border-0">Nota</th>
@@ -61,8 +62,9 @@
                             <tbody>
                             <tr v-for="entity in lists" class="mouse">
                                 <td>@{{ entity.check_ip }}</td>
-                                <td>@{{ entity.moment }}</td>
-                                <td>@{{ entity.moment }}</td>
+                                <td>@{{ entity.moment.slice(0, 10) }}</td>
+                                <td>@{{ entity.moment_enter }}</td>
+                                <td>@{{ entity.moment_exit }}</td>
                                 <td>@{{ entity.division }}</td>
                                 <td>@{{ entity.motive }}</td>
                                 <td>@{{ entity.note }}</td>

@@ -20,10 +20,11 @@
                    <div class="card-body">
                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                            <p class="tiempo">@{{  tiempo }} </p>
-                           <video autoplay="true" id="camara" ></video>
-                       </div>
+                       
+                        <video autoplay="true"  class="form-control text-center fecha" id="camara" ></video>
+                    </div>
                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 mt-1">
-                           <button class="btn btn-info btn-lg mb-1" @click="setNCodigo(0)"></i>0</button>
+                           <button class="btn btn-info btn-lg mb-1" @click="setNCodigo(0)">0</button>
                            <button class="btn btn-info btn-lg mb-1" @click="setNCodigo(1)">1</button>
                            <button class="btn btn-info btn-lg mb-1" @click="setNCodigo(2)">2</button>
                            <button class="btn btn-info btn-lg mb-1" @click="setNCodigo(3)">3</button>
@@ -35,7 +36,7 @@
                            <button class="btn btn-info btn-lg mb-1" @click="setNCodigo(9)">9</button>
                            <button class="btn btn-info btn-lg mb-1" @click="deteteNCodigo()"><i class="fa fa-eraser"></i></button>
                            <button class="btn btn-info btn-lg mb-1" @click="deteteNBAN()"><i class="fa fa-ban"></i></button>
-                           <input type="text" style="border: 2px solid red" class="form-control text-center fecha" placeholder="CODIGO" v-model="user.token" @keydown="vals($event)">
+                           <input type="text" style="border: 2px solid red" class="form-control text-center fecha" placeholder="CODIGO EMPLEADO" v-model="user.token" @keydown="vals($event)">
                        </div>
                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 mt-2 mb-2">
                            <button :disabled="user.token.length <= 0" class="btn btn-primary btn-lg" @click="checkd()">CHEQUEAR</button>
@@ -70,7 +71,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer-2">
                     <button :disabled="user.division_id === 0" @click="check()" class="btn btn-danger btn-sm">CHEQUEAR</button>
                     <a href="#" data-dismiss="modal" class="btn btn-default  btn-sm">Cerrar</a>
                 </div>
@@ -102,17 +103,37 @@
             </div>
         </div>
     </div>
-
+    <div id="modal-registro" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-info">
+                    <h5 class="modal-title" style="color: black" id="exampleModalLabel">Sucursal</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p id="mensajeModal">Mensaje de alerta</p>
+                    <button id="btnActualizarEntrada" class="btn btn-success">Actualizar Entrada</button>
+                    <button id="btnRegistrarSalida" class="btn btn-warning">Registrar Salida</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"> integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
 <script src="{{asset('appjs/tools.js')}}"> </script>
 <script src="{{asset('appjs/toasted.min.js')}}"> </script>
 <script src="{{asset('appjs/vue-toasted.js')}}"> </script>
 <script src="{{asset('appjs/camera.js')}}"> </script>
+<script>
+    $('#modal-registro').modal('hide');
+</script>
+
 </body>
 </html>

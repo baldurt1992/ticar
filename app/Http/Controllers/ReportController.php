@@ -2,18 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Company;
-use App\Division;
-use App\Exports\PersonCheckXls;
+use App;
+use App\Rol;
 use App\Motive;
 use App\Person;
-use App\PersonCheck;
-use App\Rol;
+use App\Company;
+use App\Division;
 use Carbon\Carbon;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Maatwebsite\Excel\Excel;
+use App\PersonCheck;
 use Nexmo\Call\Collection;
+use Illuminate\Http\Request;
+use Maatwebsite\Excel\Excel;
+use App\Exports\PersonCheckXls;
+use Illuminate\Support\Facades\DB;
 use phpDocumentor\Reflection\Types\Object_;
 
 class ReportController extends Controller
@@ -190,7 +191,7 @@ class ReportController extends Controller
 
     public function pdf(Request $request) {
 
-        $pdf = \App::make('snappy.pdf.wrapper');
+        $pdf = App::make('snappy.pdf.wrapper');
 
        // $skip = $request->input('start') * $request->input('take');
 

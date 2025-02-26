@@ -1,6 +1,7 @@
 #camara {
     border: 2px solid black;
-    width: 340px;
+    height:100px;
+   
 }
 .fecha {
     font-size: 25px;
@@ -33,6 +34,11 @@
     justify-content: center;
     overflow: auto;
 }
+
+p.tiempo {
+    margin: -10px 0 -15px 0;
+}
+
 @media(max-width: 768px) {
     .modal-dialog {
         min-height: calc(100vh - 20px);
@@ -42,7 +48,6 @@
 .card-body {
     padding: 0 1.875rem;
 }
-
 
 select:required:invalid {
     color: gray;

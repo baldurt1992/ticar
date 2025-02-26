@@ -11,6 +11,7 @@ use Nexmo\Response;
 use App\PersonCheck;
 use GuzzleHttp\Client;
 use App\PersonDivision;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Exports\PersonCheckXls;
 use Illuminate\Support\Facades\DB;
@@ -153,46 +154,107 @@ class PersonsController extends Controller
 
        if (empty($person)) { return response()->json('No esta registrado!', 500);}
 
-      // $imagen64 = str_replace("data:image/png;base64,", "", $data['screen']);
+       //$entradasalida = PersonCheck::where('person_id', $person->id)->where(DB::raw('DAY(moment)'), Carbon::now()->day)->update(['moment_exit' => Carbon::now()->format('H:i:s')]);
 
-      // $imagen = base64_decode($imagen64);
+// Comprobar si existe un registro de hoy con moment_enter relleno y moment_exit vacío
+$registroHoy = PersonCheck::where('person_id', $person->id)
+    ->whereNotNull('moment_enter')
+    ->whereNull('moment_exit')
+    ->first();
 
-      // $img = Image::make($imagen)->resize(400, 300);
-
-       $moment = Carbon::now();
-
-       $nombre = $moment->toIso8601String(). ".png";
+if ($registroHoy) {
+       // Verificar si la fecha del registro es de hoy o de ayer
+       $fechaRegistro = Carbon::createFromFormat('d/m/Y H:i', $registroHoy->moment)->startOfDay();
        
-       // Sacar IP
+       //Si el registro de entrada sin salida es de hoy se actualiza la salida con la hora actual
+       if ($fechaRegistro->isToday()) {
+        $registroHoy->update(['moment_exit' => Carbon::now()->format('H:i:s')]);
+        return response()->json('Se ha realizado la salida correctamente. Gracias '. $person->names, 200);
+                                        } 
+        //Si el registro de entrada sin salida es de ayer se informa al usuario
+        elseif ($fechaRegistro->isYesterday()) {
+           return response()->json([
+        'status' => 'warning',
+        'message' => 'Tiene una entrada activa sin una salida con fecha de ayer ' . $fechaRegistro->toDateString(),
+        'action_required' => true // Indica que el frontend debe mostrar un modal
+    ], 200);
+                                                } 
+        // Si el registro de entrada sin salida no es de hoy ni de ayer se informa al usuario
+                                                else {
+        return response()->json('El registro con fecha'. $fechaRegistro, 200);
+                                        }
 
-       $client = new Client();
-       $response = $client->get('http://ipinfo.io/json');
-   
-       $data_location = json_decode($response->getBody()->getContents(), true);
-       $location_ip = $data_location['ip']; // "IP Address"
-   
-       $co = PersonCheck::where('person_id', $person->id)->where(DB::raw('DAY(moment)'), $moment->day)->count();
+                    } else { 
 
-       $message = $co % 2 == 0 ? 'Gracias por registar su entrada ' . $person->names : 'Gracias por registar su salida '. $person->names ;
+                        return $this->checkin(new Request($data));
+                        
+ }
 
-       PersonCheck::create([
-
-           'person_id' => $person->id,
-
-           'moment' => $moment,
-
-           'motive_id' => $data['motive_id'],
-
-           'division_id' => $data['division_id'],
-
-           'note' => $data['note'],
-
-           'url_screen' => 'storage/' . $person->token . '/' .$nombre,
-
-           'check_ip' => $location_ip
-
-       ]);
-
-       return response()->json($message, 200);
     }
+
+    public function checkin(Request $request) {
+
+        $data = $request->all();
+
+    //** tratamiento de las imagenes capturadas */
+        //$person = Person::where('token', $data['token'])->first();
+
+        // $imagen64 = str_replace("data:image/png;base64,", "", $data['screen']);
+
+        // $imagen = base64_decode($imagen64);
+
+        // $img = Image::make($imagen)->resize(400, 300);
+        //** fin de tratamiento de las inmagenes capturadas */
+
+        $person = Person::where('token', $data['token'])->first();
+        
+        $moment = Carbon::now();
+
+        $moment_enter = Carbon::now()->format('H:i:s');
+ 
+ 
+        $nombre = $moment->toIso8601String(). ".png";
+        
+        // Sacar IP
+ 
+        $client = new Client();
+        $response = $client->get('http://ipinfo.io/json');
+    
+        $data_location = json_decode($response->getBody()->getContents(), true);
+        $location_ip = $data_location['ip']; // "IP Address"
+    
+        $co = PersonCheck::where('person_id', $person->id)->where(DB::raw('DAY(moment)'), $moment->day)->count();
+ 
+        $message = $co % 2 == 0 ? 'Gracias por registar su entrada ' . $person->names : 'Gracias por registar su salida '. $person->names ;
+ 
+        PersonCheck::create([
+ 
+            'person_id' => $person->id,
+ 
+            'moment' => $moment,
+ 
+            'moment_enter' => $moment_enter,
+ 
+            'motive_id' => $data['motive_id'],
+ 
+            'division_id' => $data['division_id'],
+ 
+            'note' => $data['note'],
+ 
+            'url_screen' => 'storage/' . $person->token . '/' .$nombre,
+ 
+            'check_ip' => $location_ip
+ 
+ ]);
+
+    return response()->json($message, 200);
+    
+}
+
+
+
+
+
+
+
 }

@@ -17,6 +17,10 @@ class PersonCheck extends Model
 
         'moment',
 
+        'moment_enter',
+
+        'moment_exit',
+
         'motive_id',
 
         'note',
