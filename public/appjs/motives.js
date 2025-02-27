@@ -4,7 +4,7 @@ Vue.use(Toasted);
 
 new Vue({
     el: '#app',
-    data () {
+    data() {
         return {
             file: null,
             formData: 0,
@@ -23,9 +23,13 @@ new Vue({
             importview: false,
             item: {
                 id: 0,
-                motive: ''
+                motive: '',
+                discount_time: 0
             },
-            listfield: [{name: 'Nombre', type: 'text', field: 'motives.motive'}],
+            listfield: [
+                { name: 'Nombre', type: 'text', field: 'motives.motive' },
+                { name: 'Descuento de tiempo', type: 'checkbox', field: 'motives.discount_time' } // Nuevo campo checkbox
+            ],
             fieldtype: 'text',
             filters: {
                 descrip: 'Nombre',
@@ -49,14 +53,14 @@ new Vue({
             this.getlist()
         }
     },
-    mounted () {
+    mounted() {
 
         this.getlist();
 
     },
     methods: {
         valid: validd,
-        setfield (f){
+        setfield(f) {
 
             this.filters.value = '';
 
@@ -69,7 +73,7 @@ new Vue({
             this.fieldtype = f.type
 
         },
-        getlist (pFil, pOrder, pPager) {
+        getlist(pFil, pOrder, pPager) {
             if (pFil !== undefined) { this.filters = pFil }
 
             if (pOrder !== undefined) { this.orders = pOrder }
@@ -83,7 +87,7 @@ new Vue({
 
                 url: urldomine + 'api/motives/list',
 
-                params: {start: this.pager.page - 1, take: this.pager.recordpage, filters: this.filters, orders: this.orders}
+                params: { start: this.pager.page - 1, take: this.pager.recordpage, filters: this.filters, orders: this.orders }
 
             }).then(response => {
 
@@ -100,7 +104,7 @@ new Vue({
                 this.$toasted.show(e.response.data, toast_options);
             })
         },
-        add () {
+        add() {
             this.title = 'Añadir motivo';
 
             this.item.motive = '';
@@ -110,7 +114,7 @@ new Vue({
             this.onview('new')
 
         },
-        edit (it) {
+        edit(it) {
 
             this.item = JSON.parse(JSON.stringify(it));
 
@@ -121,7 +125,7 @@ new Vue({
             this.onview('new')
 
         },
-        save () {
+        save() {
 
             this.spin = true;
 
@@ -159,7 +163,7 @@ new Vue({
             })
 
         },
-        delitem () {
+        delitem() {
 
             this.spin = true;
 
@@ -197,17 +201,17 @@ new Vue({
             $('#modaldelete').modal('show')
 
         },
-        close () {
+        close() {
 
             this.add();
 
             this.onview('list')
 
         },
-        pass () {
-           return this.item.motive !== '';
+        pass() {
+            return this.item.motive !== '';
         },
-        onview (pro) {
+        onview(pro) {
 
             for (let property in this.views) {
 

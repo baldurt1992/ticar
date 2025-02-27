@@ -20,6 +20,13 @@
                                 <label >Nombre *</label>
                                 <input type="text" class="form-control" v-model="item.motive">
                             </div>
+                           
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="flexCheckDefault" v-model="item.discount_time">
+                                <label class="form-check-label" for="flexCheckDefault">
+                                    Descuenta tiempo
+                                </label>
+                            </div>
                         </div>
 
                     </div>
