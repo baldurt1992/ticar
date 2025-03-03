@@ -23,6 +23,13 @@ class DivisionsController extends Controller
     {
 
         $division = Person::with('divisions')->where('token', $token)->first();
+        $person = Person::where('token', $token)->first();
+        $registroHoyMotivo = PersonCheck::where('person_id', $person->id)
+            ->whereNotNull('moment_enter')
+            ->where('motive_id', '>', 0)
+            ->whereNull('moment_exit')
+            ->first();
+        $pendingCheckMotive = $registroHoyMotivo->motive_id ?? 0;
 
         if (empty($division))  return response()->json('No existes en nuestra base de datos!!',  500);
 
@@ -30,36 +37,37 @@ class DivisionsController extends Controller
 
         $division = Division::wherein('id', $ids)->get();
 
-        return response()->json($division, 200);
+        return response()->json(['division' => $division, 'pendeing_check_motive' => $pendingCheckMotive], 200);
     }
 
-    public function getList(Request $request) {
+    public function getList(Request $request)
+    {
 
-            $skip = $request->input('start') * $request->input('take');
+        $skip = $request->input('start') * $request->input('take');
 
-            $filters = $request->input('filters', true);
+        $filters = $request->input('filters', true);
 
-            $orders = $request->input('orders', true);
+        $orders = $request->input('orders', true);
 
-            $datos = Division::with('Status');
+        $datos = Division::with('Status');
 
-            if ( $filters['value'] !== '') $datos->where( $filters['field'], 'LIKE', '%'.$filters['value'].'%');
+        if ($filters['value'] !== '') $datos->where($filters['field'], 'LIKE', '%' . $filters['value'] . '%');
 
-            $datos = $datos->orderby($orders['field'], $orders['type']);
+        $datos = $datos->orderby($orders['field'], $orders['type']);
 
-            $total = $datos->select('*')->count();
+        $total = $datos->select('*')->count();
 
-            $list =  $datos->skip($skip)->take($request['take'])->get();
+        $list =  $datos->skip($skip)->take($request['take'])->get();
 
-            $result = [
+        $result = [
 
-                'total' => $total,
+            'total' => $total,
 
-                'list' =>  $list,
+            'list' =>  $list,
 
-            ];
+        ];
 
-            return response()->json($result, 200);
+        return response()->json($result, 200);
     }
 
     public function store(Request $request)
@@ -86,7 +94,5 @@ class DivisionsController extends Controller
         Division::destroy($id);
 
         return response()->json('Datos eliminados con exito!', 200);
-
     }
-
 }

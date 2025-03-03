@@ -174,7 +174,7 @@ class PersonsController extends Controller
                 if (!empty($data['motive_id'])) {
                     return $this->checkMotive($data, $registroHoy, $person);
                 } else {
-                    $registroHoy->update(['moment_exit' => Carbon::now()->format('H:i:s')]);
+                    $registroHoy->update(['moment_exit' => Carbon::now()->format('Y-m-d H:i:s')]);
                     return response()->json('Se ha realizado la salida correctamente. Gracias ' . $person->names, 200);
                 }
             }
@@ -217,7 +217,7 @@ class PersonsController extends Controller
 
         $moment = Carbon::now();
 
-        $moment_enter = Carbon::now()->format('H:i:s');
+        $moment_enter = Carbon::now()->format('Y-m-d H:i:s');
 
 
         $nombre = $moment->toIso8601String() . ".png";
@@ -277,7 +277,7 @@ class PersonsController extends Controller
             //Si el registro de entrada sin salida es de hoy se actualiza la salida con la hora actual
             if ($fechaRegistro->isToday()) {
 
-                $registroHoyMotivo->update(['moment_exit' => Carbon::now()->format('H:i:s')]);
+                $registroHoyMotivo->update(['moment_exit' => Carbon::now()->format('Y-m-d H:i:s')]);
                 return response()->json('Se ha registrado regreso de pausa correctamente. Gracias ' . $person->names, 200);
             }
             //

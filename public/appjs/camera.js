@@ -2,11 +2,11 @@ Vue.use(Toasted, toast_options);
 
 new Vue({
     el: '#app',
-    data () {
+    data() {
         return {
             tiempo: 1,
-            semana: ['Domingo','Lunes','Martes','Miercoles','Jueves','Viernes','Sabado'],
-            meses: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
+            semana: ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'],
+            meses: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
             diaSemana: '',
             dia: '',
             mes: '',
@@ -22,10 +22,11 @@ new Vue({
                 division_id: 0
             },
             motives: [],
-            divisions:[]
+            divisions: [],
+            pending_check_motive: 0,
         }
     },
-    mounted () {
+    mounted() {
         setInterval(() => {
             this.reloj()
         }, 1000);
@@ -33,8 +34,9 @@ new Vue({
         this.video = document.querySelector("#camara");
         this.canvas = document.getElementById("canvas");
         if (this.soporteUserMedia()) {
-            this._getUserMedia({video: true}, (stream) => { this.video.srcObject = stream;}, er => {
-                this.$toasted.show(er, toast_options)});
+            this._getUserMedia({ video: true }, (stream) => { this.video.srcObject = stream; }, er => {
+                this.$toasted.show(er, toast_options)
+            });
         } else {
             this.$toasted.show('Lo siento. El navegador no soporta esta característica', toast_options)
         }
@@ -45,20 +47,20 @@ new Vue({
 
     },
     methods: {
-        vals (e) {
+        vals(e) {
 
-           if (e.key === 'Enter') {
-              this.checkd ()
-           }
+            if (e.key === 'Enter') {
+                this.checkd()
+            }
 
         },
-        showOb () {
+        showOb() {
             axios.get(urldomine + 'api/divisions/data/' + this.user.token).then(res => {
                 if (res.data.length > 1) {
-                    this.divisions = res.data;
+                    this.divisions = res.data.division;
                     $('#modalob').modal('show');
                 } else {
-                    this.user.division_id = res.data[0].id;
+                    this.user.division_id = res.data.division[0].id;
                     $('#modalob').modal('show');
                 }
 
@@ -68,37 +70,37 @@ new Vue({
 
         },
         setNCodigo(x) {
-          this.user.token += x;
+            this.user.token += x;
         },
         deteteNBAN() {
             this.user.token = ''
         },
         deteteNCodigo() {
-          this.user.token = this.user.token.substring(0, this.user.token.length - 1)
+            this.user.token = this.user.token.substring(0, this.user.token.length - 1)
         },
-        soporteUserMedia(){
-            return !!(navigator.getUserMedia ||  navigator.mediaDevices.getUserMedia || navigator.webkitGetUserMedia || navigator.msGetUserMedia)
+        soporteUserMedia() {
+            return !!(navigator.getUserMedia || navigator.mediaDevices.getUserMedia || navigator.webkitGetUserMedia || navigator.msGetUserMedia)
         },
-        _getUserMedia(){
-            return (navigator.getUserMedia || (navigator.mozGetUserMedia ||  navigator.mediaDevices.getUserMedia) || navigator.webkitGetUserMedia || navigator.msGetUserMedia).apply(navigator, arguments);
+        _getUserMedia() {
+            return (navigator.getUserMedia || (navigator.mozGetUserMedia || navigator.mediaDevices.getUserMedia) || navigator.webkitGetUserMedia || navigator.msGetUserMedia).apply(navigator, arguments);
         },
-        fecha () {
+        fecha() {
             let fecha = new Date();
             this.diaSemana = this.semana[fecha.getDay()];
             this.mes = this.meses[fecha.getMonth()];
             this.anio = fecha.getFullYear();
             this.dia = fecha.getDate();
         },
-        reloj () {
+        reloj() {
             this.tiempo = new Date().toLocaleTimeString();
         },
-        checkd () {
+        checkd() {
             axios.get(urldomine + 'api/divisions/data/' + this.user.token).then(res => {
                 if (res.data.length > 1) {
-                    this.divisions = res.data;
+                    this.divisions = res.data.division;
                     $('#div').modal('show');
                 } else {
-                    this.user.division_id = res.data[0].id;
+                    this.user.division_id = res.data.division[0].id;
                     this.check()
                 }
 
@@ -106,7 +108,7 @@ new Vue({
                 this.$toasted.show(er.response.data)
             });
         },
-        check () {
+        check() {
 
             this.video.pause();
             let contexto = this.canvas.getContext("2d");
@@ -121,10 +123,10 @@ new Vue({
                 data: this.user,
             }).then(res => {
                 this.$toasted.show(res.data, toast_options);
-                this.user.token ='';
+                this.user.token = '';
                 this.user.motive_id = 0;
                 this.user.note = '';
-                this.user.screen =0;
+                this.user.screen = 0;
                 $('#div').modal('hide');
                 $('#modalob').modal('hide');
             }).catch(er => {

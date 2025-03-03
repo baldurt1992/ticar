@@ -36,7 +36,7 @@
                            <button class="btn btn-info btn-lg mb-1" @click="setNCodigo(9)">9</button>
                            <button class="btn btn-info btn-lg mb-1" @click="deteteNCodigo()"><i class="fa fa-eraser"></i></button>
                            <button class="btn btn-info btn-lg mb-1" @click="deteteNBAN()"><i class="fa fa-ban"></i></button>
-                           <input type="text" style="border: 2px solid red" class="form-control text-center fecha" placeholder="CODIGO EMPLEADO" v-model="user.token" @keydown="vals($event)">
+                           <input type="text" style="border: 2px solid red" class="form-control text-center fecha" placeholder="CODIGO EMPLEADO" v-model="user.token" @keydown="vals($event)" readonly="readonly">
                        </div>
                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 mt-2 mb-2">
                            <button :disabled="user.token.length <= 0" class="btn btn-primary btn-lg" @click="checkd()">CHEQUEAR</button>
