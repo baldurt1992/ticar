@@ -56,12 +56,25 @@ new Vue({
         },
         showOb() {
             axios.get(urldomine + 'api/divisions/data/' + this.user.token).then(res => {
-                if (res.data.length > 1) {
+
+                if (res.data.division.length > 1) {
                     this.divisions = res.data.division;
+                    this.pending_check_motive = res.data.pending_check_motive
+
                     $('#modalob').modal('show');
                 } else {
                     this.user.division_id = res.data.division[0].id;
+                    this.pending_check_motive = res.data.pending_check_motive
                     $('#modalob').modal('show');
+                }
+                if (this.pending_check_motive > 0) {
+                    this.user.motive_id = this.pending_check_motive
+                    $('#block_motives').attr('disabled', true);
+                    $('#block_motives').val(this.pending_check_motive);
+                    $('#block_motives option[value="' + this.pending_check_motive + '"]').prop('selected', true);
+                } else {
+                    $('#block_motives').attr('disabled', false);
+                    $('#block_motives').val('');
                 }
 
             }).catch(er => {
@@ -96,11 +109,14 @@ new Vue({
         },
         checkd() {
             axios.get(urldomine + 'api/divisions/data/' + this.user.token).then(res => {
-                if (res.data.length > 1) {
+                if (res.data.division.length > 1) {
                     this.divisions = res.data.division;
                     $('#div').modal('show');
+                    this.pending_check_motive = res.data.pending_check_motive
                 } else {
+
                     this.user.division_id = res.data.division[0].id;
+                    this.pending_check_motive = res.data.pending_check_motive
                     this.check()
                 }
 

@@ -59,8 +59,8 @@
                 </div>
                 <div class="modal-body">
                     Motivos
-                    <select class="form-control custom-select"  v-model="user.motive_id">
-                        <option v-for="mot in  motives" :value="mot.id">@{{ mot.motive }}</option>
+                    <select class="form-control custom-select"  v-model="user.motive_id" id="block_motives" >
+                        <option v-for="mot in  motives" :value="mot.id"  >@{{ mot.motive }}</option>
                     </select>
                     Nota
                     <textarea class="form-control" v-model="user.note" rows="5"></textarea>

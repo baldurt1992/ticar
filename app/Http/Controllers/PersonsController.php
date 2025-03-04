@@ -148,6 +148,9 @@ class PersonsController extends Controller
 
     public function check(Request $request)
     {
+        $validated = $request->validate([
+            'token' => 'required|min:2'
+        ]);
 
         $data = $request->all();
         $person = Person::where('token', $data['token'])->first();
@@ -180,11 +183,7 @@ class PersonsController extends Controller
             }
             //Si el registro de entrada sin salida es de ayer se informa al usuario
             elseif ($fechaRegistro->isYesterday()) {
-                return response()->json([
-                    'status' => 'warning',
-                    'message' => 'Tiene una entrada activa sin una salida con fecha de ayer ' . $fechaRegistro->toDateString(),
-                    'action_required' => true // Indica que el frontend debe mostrar un modal
-                ], 200);
+                return response()->json('Tiene una entrada activa sin una salida con fecha de ayer ' . $fechaRegistro->toDateString(), 200);
             }
             // Si el registro de entrada sin salida no es de hoy ni de ayer se informa al usuario
             else {
