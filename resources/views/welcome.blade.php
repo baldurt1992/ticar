@@ -39,7 +39,8 @@
                            <input type="text" style="border: 2px solid red" class="form-control text-center fecha" placeholder="CODIGO EMPLEADO" v-model="user.token" @keydown="vals($event)" readonly="readonly">
                        </div>
                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 mt-2 mb-2">
-                           <button :disabled="user.token.length <= 0" class="btn btn-primary btn-lg" @click="checkd()">CHEQUEAR</button>
+                       <button :disabled="user.token.length <= 0" class="btn btn-success btn-lg" @click="openConfirm('entrada')">ENTRAR</button>
+                        <button :disabled="user.token.length <= 0" class="btn btn-danger btn-lg" @click="openConfirm('salida')">SALIR</button>
                            <button :disabled="user.token.length <= 0" class="btn btn-warning btn-lg" @click="showOb()">OTR</button>
                            <canvas id="canvas" style="display: none;"></canvas>
                        </div>
@@ -120,6 +121,25 @@
             </div>
         </div>
     </div>
+
+    <div id="confirmModal" class="modal fade" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-info">
+        <h5 class="modal-title text-dark">Confirmar acción</h5>
+        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+      </div>
+      <div class="modal-body">
+        <p id="confirmMessage">¿Estás seguro?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" @click="confirmAction">Sí</button>
+        <button class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>

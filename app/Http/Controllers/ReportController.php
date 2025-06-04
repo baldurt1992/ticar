@@ -16,6 +16,8 @@ use Maatwebsite\Excel\Excel;
 use App\Exports\PersonCheckXls;
 use Illuminate\Support\Facades\DB;
 use phpDocumentor\Reflection\Types\Object_;
+use Barryvdh\Snappy\Facades\SnappyPdf as PDF;
+
 
 class ReportController extends Controller
 {
@@ -66,7 +68,6 @@ class ReportController extends Controller
         $data =  $datos->skip($skip)->take($request['take'])->get();
 
        // return response()->json($data, 200);
-
         $list = [];
 
         $times = [];
@@ -87,7 +88,8 @@ class ReportController extends Controller
 
                 $data[$i]['hours'] = 0;
 
-                $list[] = $data[$i];
+                $list[] = is_array($data[$i]) ? $data[$i] : $data[$i]->toArray();
+
 
                 break;
             }
@@ -118,7 +120,8 @@ class ReportController extends Controller
 
                 $data[$i]['hours'] = $h[0] . ':' . $h[1]; // number_format($hours / 60, 2, ':', '');
 
-                $list[] = $data[$i];
+                $list[] = is_array($data[$i]) ? $data[$i] : $data[$i]->toArray();
+
 
                 if (($i + 2) <= count($data) - 1) {
 
@@ -156,7 +159,8 @@ class ReportController extends Controller
 
                 $data[$i]['hours'] = '0';
 
-                $list[] = $data[$i];
+                $list[] = is_array($data[$i]) ? $data[$i] : $data[$i]->toArray();
+
 
                 $totalminut = collect($times)->reduce(function ($carry, $item) {
                     return $carry + $item;
@@ -189,182 +193,148 @@ class ReportController extends Controller
         return response()->json($result, 200);
     }
 
-    public function pdf(Request $request) {
+    public function pdf(Request $request)
+{
+    $filters = $request->input('filters');
+    $list = $this->generateList($filters);
 
-        $pdf = App::make('snappy.pdf.wrapper');
+    if (count($list) <= 0) {
+        return response()->json('No existen datos!', 500);
+    }
 
-       // $skip = $request->input('start') * $request->input('take');
+    $result = [
+        'list' => $list,
+        'filters' => $filters,
+        'company' => Company::first()
+    ];
 
-        $filters = $request->input('filters');
+    $html = \View::make('reports.pdf', $result)->render();
 
-        $person_id = $filters['person'];
+    $pdf = App::make('snappy.pdf.wrapper');
+    $pdf->setBinary(env('WKHTMLTOPDF_PATH')); 
 
-        $dstar = $filters['dstar'];
+    $pdf->loadHTML($html);
 
-        $dend =  $filters['dend'];
+    return response($pdf->output(), 200)
+    ->header('Content-Type', 'application/pdf')
+    ->header('Content-Disposition', 'attachment; filename="reporte.pdf"');
+}
 
-        $division = $filters['division'];
+    public function export(Request $request)
+    {
+        $filters = $request->input('filters', []);
+        $list = $this->generateList($filters);
 
-        $rol = $filters['rol'];
+        if (count($list) <= 0) {
+            return response()->json('No existen datos para exportar', 500);
+        }
+
+        $list = $this->generateList($filters);
+    return \Excel::download(new PersonCheckXls($list), 'reporte.xlsx');
+
+    }
+
+    private function generateList($filters)
+    {
+        $person_id = $filters['person'] ?? 0;
+        $dstar     = $filters['dstar'] ?? now()->startOfDay();
+        $dend      = $filters['dend'] ?? now()->endOfDay();
+        $division  = $filters['division'] ?? 0;
+        $rol       = $filters['rol'] ?? 0;
 
         $datos = Person::leftjoin('persons_divisions','persons_divisions.person_id', 'persons.id')
-
             ->leftjoin('divisions','persons_divisions.division_id', 'divisions.id')
-
             ->leftjoin('persons_rols','persons_rols.person_id', 'persons.id')
-
             ->leftjoin('rols','persons_rols.rol_id', 'rols.id')
-
             ->leftjoin('persons_checks','persons_checks.person_id', 'persons.id');
 
         if ($person_id > 0) $datos->where('persons.id', $person_id);
-
         if ($division > 0) $datos->where('divisions.id', $division);
+        if ($rol > 0) $datos->where('rols.id', $rol);
 
         $datos->whereBetween('moment', [$dstar, $dend]);
+        $datos->orderBy('moment', 'asc');
 
-        $datos->orderby('moment', 'asc');
-
-        if ($rol > 0) $datos->where( 'rols.id', $rol);
-
-        $total = $datos->select('persons.names', 'persons.token', 'persons.id', 'divisions.names as div', 'rols.rol', DB::raw('DATE_FORMAT(persons_checks.moment, "%Y-%m-%d %H:%i") as moment'))->count();
-
-        $data =  $datos->get();
+        $data = $datos->select(
+            'persons.names', 'persons.token', 'persons.id',
+            'divisions.names as div', 'rols.rol',
+            DB::raw('DATE_FORMAT(persons_checks.moment, "%Y-%m-%d %H:%i") as moment')
+        )->get();
 
         $list = [];
-
         $times = [];
 
         for ($i = 0; $i <= count($data) - 1; $i++) {
-
             $start = Carbon::parse($data[$i]['moment']);
 
             if ($i + 1 <= count($data) - 1) {
-
-                $end = Carbon::parse($data[$i+1]['moment']);
-
+                $end = Carbon::parse($data[$i + 1]['moment']);
             } else {
-
-                $data[$i]['dend'] = '-';
-
-                $data[$i]['dstar'] = $data[$i]['moment'];
-
-                $data[$i]['hours'] = 0;
-
-                $list[] = $data[$i];
-
+                $list[] = [
+                    'names' => $data[$i]['names'],
+                    'token' => $data[$i]['token'],
+                    'div'   => $data[$i]['div'],
+                    'rol'   => $data[$i]['rol'],
+                    'moment'=> $data[$i]['moment'],
+                    'dstar' => $data[$i]['moment'],
+                    'dend'  => '-',
+                    'hours' => 0
+                ];
                 break;
             }
 
-            if ( $start->day == $end->day) {
+            if ($start->day == $end->day) {
+                $minutes = $end->diffInMinutes($start);
+                $times[] = $minutes;
 
-                $hours = (Carbon::parse($data[$i+1]['moment'])->diffInMinutes(Carbon::parse($data[$i]['moment'])));
+                $h = floor($minutes / 60);
+                $m = str_pad($minutes % 60, 2, '0', STR_PAD_LEFT);
 
-                $times[] = $hours ;
+                $list[] = [
+                    'names' => $data[$i]['names'],
+                    'token' => $data[$i]['token'],
+                    'div'   => $data[$i]['div'],
+                    'rol'   => $data[$i]['rol'],
+                    'moment'=> $data[$i]['moment'],
+                    'dstar' => $data[$i]['moment'],
+                    'dend'  => $data[$i + 1]['moment'],
+                    'hours' => "$h:$m"
+                ];
 
-                $data[$i]['dend'] = $data[$i+1]['moment'];
+                if (($i + 2) <= count($data) - 1 && $end->day < Carbon::parse($data[$i + 2]['moment'])->day) {
+                    $totalMin = collect($times)->sum();
+                    $th = floor($totalMin / 60);
+                    $tm = str_pad($totalMin % 60, 2, '0', STR_PAD_LEFT);
 
-                $data[$i]['dstar'] = $data[$i]['moment'];
-
-                if (!is_int( $hours / 60)) {
-
-                    $aux = (string) $hours /60;
-
-                    $h = explode('.', $aux);
-
-                    $h[1] = round(((int) substr( $h[1], 0, 2) / 100) * 60);
-
-                    $h[1] = $h[1] < 10 ? '0'.$h[1] : $h[1];
-                }  else {
-
-                    $h[0] = $hours / 60;  $h[1] = 0;
+                    $list[] = ['names'=> '', 'token'=>'', 'div'=>'', 'rol'=>'', 'moment'=>'-', 'dstar'=>'', 'dend'=>'Total', 'hours'=>"$th:$tm"];
+                    $times = [];
                 }
 
-                $data[$i]['hours'] = $h[0] . ':' . $h[1]; // number_format($hours / 60, 2, ':', '');
-
-                $list[] = $data[$i]->toArray();
-
-                if (($i + 2) <= count($data) - 1) {
-
-                    if ($end->day < Carbon::parse($data[$i+2]['moment'])->day) {
-
-                        $totalminut = collect($times)->reduce(function ($carry, $item) {
-                            return $carry + $item;
-                        });
-
-                        $aux = (string) $totalminut  /60;
-
-                        $h = explode('.', $aux);
-
-                        $h[1] = round(((int) substr( $h[1], 0, 2) / 100) * 60);
-
-                        $h[1] = $h[1] < 10 ? '0'.$h[1] : $h[1];
-
-                        $list[] =['names'=> '', 'token' =>'', 'div' => '', 'rol' => '',  'moment' => '-', 'dstar' => '', 'dend' => 'Total', 'hours' => $h[0] . ':' . $h[1]];
-
-                        $times= [];
-                    }
-
-                }
-
-                $i = $i + 1;
-
-                if (($i + 2) > count($data) - 1) { $i = count($data) - 1;}
-
+                $i++;
+                if ($i + 2 > count($data) - 1) $i = count($data) - 1;
 
             } else {
+                $list[] = [
+                    'names' => $data[$i]['names'],
+                    'token' => $data[$i]['token'],
+                    'div'   => $data[$i]['div'],
+                    'rol'   => $data[$i]['rol'],
+                    'moment'=> $data[$i]['moment'],
+                    'dstar' => $data[$i]['moment'],
+                    'dend'  => '-',
+                    'hours' => '0'
+                ];
 
-                $data[$i]['dend'] = '-';
+                $totalMin = collect($times)->sum();
+                $th = floor($totalMin / 60);
+                $tm = str_pad($totalMin % 60, 2, '0', STR_PAD_LEFT);
 
-                $data[$i]['dstar'] = $data[$i]['moment'];
-
-                $data[$i]['hours'] = '0';
-
-                $list[] = $data[$i]->toArray();
-
-                $totalminut = collect($times)->reduce(function ($carry, $item) {
-                    return $carry + $item;
-                });
-
-                $hours = $totalminut * (1/60);
-
-                $list[] =  ['names'=> '', 'token' =>'', 'div' => '', 'rol' => '',  'moment' => '-', 'dstar' => '', 'dend' => 'Total', 'hours' => number_format($hours, 2, '.', '')];
-
-                $times= [];
+                $list[] = ['names'=> '', 'token'=>'', 'div'=>'', 'rol'=>'', 'moment'=>'-', 'dstar'=>'', 'dend'=>'Total', 'hours'=>"$th:$tm"];
+                $times = [];
             }
-
         }
-      //  return response()->json($list, 200);
 
-        $result = [
-
-            'list' =>  $list,
-
-            'filters' =>  $filters,
-
-            'company' => Company::first()
-
-        ];
-
-        if (count($list) <= 0) { return response()->json('No exiten datos!', 500);}
-        if (count($list) <= 0) { return response()->json('No exiten datos!', 500);}
-
-        $footer = \View::make('reports.footer_simple')->render();
-
-        $html = \View::make('reports.pdf',  $result)->render();
-
-        $pdf->loadHTML($html)->setOption('footer-html', $footer);
-
-        $pdfBase64 = base64_encode($pdf->inline());
-
-        return 'data:application/pdf;base64,' . $pdfBase64;
+        return $list;
     }
 
-    public function export (Request $request) {
-
-
-        $filters = $request->all();
-
-        return \Excel::download(new PersonCheckXls($filters), 'personal.xlsx');
-    }
 }

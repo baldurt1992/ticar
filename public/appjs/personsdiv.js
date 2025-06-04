@@ -4,7 +4,7 @@ Vue.use(Toasted);
 
 new Vue({
     el: '#app',
-    data () {
+    data() {
         return {
             file: null,
             formData: 0,
@@ -28,9 +28,9 @@ new Vue({
                 motive_id: '',
                 email: '',
                 note: '',
-                url_screen:''
+                url_screen: ''
             },
-            listfield: [{name: 'Nombre', type: 'date', field: 'person.names'}, {name: 'Codigo', type: 'text', field: 'persons.token'}],
+            listfield: [{ name: 'Nombre', type: 'date', field: 'person.names' }, { name: 'Codigo', type: 'text', field: 'persons.token' }],
             fieldtype: 'text',
             filters: {
                 descrip: 'Nombre',
@@ -59,7 +59,7 @@ new Vue({
             this.getlist()
         }
     },
-    mounted () {
+    mounted() {
 
         this.formData = new FormData();
 
@@ -70,11 +70,11 @@ new Vue({
 
     },
     methods: {
-        imgFull (x) {
+        imgFull(x) {
             this.img = x;
             $('#img').modal('show');
         },
-        setfield (f){
+        setfield(f) {
 
             this.filters.value = '';
 
@@ -87,7 +87,7 @@ new Vue({
             this.fieldtype = f.type
 
         },
-        getlist (pFil, pOrder, pPager) {
+        getlist(pFil, pOrder, pPager) {
             if (pFil !== undefined) { this.filters = pFil }
 
             if (pOrder !== undefined) { this.orders = pOrder }
@@ -101,7 +101,7 @@ new Vue({
 
                 url: urldomine + 'api/divs/list',
 
-                params: {start: this.pager.page - 1, take: this.pager.recordpage, filters: this.filters, orders: this.orders}
+                params: { start: this.pager.page - 1, take: this.pager.recordpage, filters: this.filters, orders: this.orders }
 
             }).then(response => {
 
@@ -120,10 +120,10 @@ new Vue({
                 this.$toasted.show(e.response.data, toast_options);
             })
         },
-        back (it) {
+        back(it) {
             location.href = urldomine + 'divisions'
         },
-        delitem () {
+        delitem() {
 
             this.spin = true;
 
@@ -161,7 +161,7 @@ new Vue({
             $('#modaldelete').modal('show')
 
         },
-        close () {
+        close() {
 
             this.add();
 
@@ -169,17 +169,17 @@ new Vue({
 
         },
 
-        pass () {
+        pass() {
 
-           let name = this.item.name !== '';
+            let name = this.item.name !== '';
 
-           let token = this.item.token !== '';
+            let token = this.item.token !== '';
 
-           let address = this.item.address !== '';
+            let address = this.item.address !== '';
 
-           let email = /^(([^<>()[\].,;:\s@"]+(\.[^<>()[\].,;:\s@"]+)*)|(".+"))@(([^<>()[\].,;:\s@"]+\.)+[^<>()[\].,;:\s@"]{2,})$/i.test(this.item.email);
+            let email = /^(([^<>()[\].,;:\s@"]+(\.[^<>()[\].,;:\s@"]+)*)|(".+"))@(([^<>()[\].,;:\s@"]+\.)+[^<>()[\].,;:\s@"]{2,})$/i.test(this.item.email);
 
-           return name && address && token && email
+            return name && address && token && email
         },
         getfile(e) {
 
@@ -196,7 +196,7 @@ new Vue({
                 this.formData.append('importfile', this.file)
             }
         },
-        onview (pro) {
+        onview(pro) {
 
             for (let property in this.views) {
 

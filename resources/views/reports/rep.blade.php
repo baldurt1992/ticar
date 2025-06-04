@@ -7,18 +7,9 @@
                     <div class="card-header border-bottom">
                         <div class="row">
                             <div class="col-lg-2 col-sm-2 text-center text-sm-left mb-0">
-                                <button class="btn btn-success" @click="getpdf()"><i class="fa fa-file-pdf "></i></button>
-                                <button class="btn btn-success" onclick="event.preventDefault();
-                                                     document.getElementById('xls-form').submit()">xls</button>
-                                <form id="xls-form" action="{{ route('reportxls') }}" method="POST" style="display: none;">
-                                    @csrf
-                                    <input type="text" name="division" :value="filters.division" hidden>
-                                    <input type="text" name="rol" :value="filters.rol" hidden>
-                                    <input type="text" name="person" :value="filters.person" hidden>
-                                    <input type="text" name="dstar" :value="filters.dstar" hidden>
-                                    <input type="text" name="dend" :value="filters.dend" hidden>
-                                </form>
-                            </div>
+                                <button class="btn btn-success" @click="getpdf()"><i class="fa fa-file-pdf "></i></button>                               
+                                <button class="btn btn-success" @click="getxls()"><i class="fa fa-file-excel"></i> </button>
+                         </div>
                             <div class="col-lg-11 col-sm-1 text-center text-sm-left mb-0">
                             </div>
                         </div>

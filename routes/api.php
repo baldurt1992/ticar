@@ -57,6 +57,7 @@ Route::resource('/divs', PersonDivController::class);
 Route::prefix('reports')->group(function () {
     Route::get('list', [ReportController::class, 'getList']);
     Route::post('pdf', [ReportController::class, 'pdf']);
+    Route::post('export', [ReportController::class, 'export']);
 });
 Route::resource('/reports', ReportController::class);
 

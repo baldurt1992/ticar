@@ -4,7 +4,7 @@ Vue.use(Toasted);
 
 new Vue({
     el: '#app',
-    data () {
+    data() {
         return {
             file: null,
             formData: 0,
@@ -21,7 +21,7 @@ new Vue({
             },
             unlookview: false,
             importview: false,
-            listfield: [{name: 'Fecha', type: 'date', field: 'persons_checks.moment'}, {name: 'Motivo', type: 'select',  field: 'persons_checks.motive_id'}],
+            listfield: [{ name: 'Fecha', type: 'date', field: 'persons_checks.moment' }, { name: 'Motivo', type: 'select', field: 'persons_checks.motive_id' }],
             fieldtype: 'text',
             filters: {
                 division: 0,
@@ -61,7 +61,7 @@ new Vue({
             this.getlist()
         },
     },
-    mounted () {
+    mounted() {
         $('input[name="datetimes"]').daterangepicker({
             timePicker: true,
             opens: 'left',
@@ -79,11 +79,11 @@ new Vue({
                 monthNames: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"],
                 format: 'D-M-Y hh:mm A'
             }
-        },(start, end, label) => {
+        }, (start, end, label) => {
 
-           this.filters.dstar = start.format('YYYY-MM-DD H:mm');
+            this.filters.dstar = start.format('YYYY-MM-DD H:mm');
 
-           this.filters.dend =  end.format('YYYY-MM-DD H:mm');
+            this.filters.dend = end.format('YYYY-MM-DD H:mm');
 
         });
 
@@ -93,39 +93,89 @@ new Vue({
 
     },
     methods: {
-        getpdf(){
-
+        getpdf() {
             this.spin = true;
 
-            axios.post(urldomine + 'api/reports/pdf', {filters: this.filters}).then(response => {
-
-                this.spin = false;
-
-                window.$('#iframe').attr('src', response.data);
-
-                window.$('#pdf').modal('show')
-
-            }).catch(er => {
-
-                this.spin = false;
-
-                this.$toasted.show(er.response.data, toast_options);
+            axios.post(urldomine + 'api/reports/pdf', { filters: this.filters }, {
+                responseType: 'blob'
             })
+                .then(response => {
+                    this.spin = false;
+                    const contentType = response.headers['content-type'];
+                    if (!contentType.includes('application/pdf')) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                            this.$toasted.show(reader.result || 'Error desconocido', toast_options);
+                        };
+                        reader.readAsText(response.data);
+                        return;
+                    }
+                    const blob = new Blob([response.data], { type: 'application/pdf' });
+                    const url = URL.createObjectURL(blob);
+
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'reporte.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+
+                    setTimeout(() => URL.revokeObjectURL(url), 10000);
+                })
+                .catch(() => {
+                    this.spin = false;
+                    this.$toasted.show('Error al generar PDF', toast_options);
+                });
         },
-        cleardiv () {
-           this.filters.division = 0
+
+        getxls() {
+            this.spin = true;
+
+            axios.post(urldomine + 'api/reports/export', { filters: this.filters }, {
+                responseType: 'blob'
+            }).then(response => {
+                this.spin = false;
+
+                const contentType = response.headers['content-type'];
+                if (!contentType.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        this.$toasted.show(reader.result || 'Error desconocido', toast_options);
+                    };
+                    reader.readAsText(response.data);
+                    return;
+                }
+
+                const blob = new Blob([response.data], { type: contentType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'reporte.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+
+                setTimeout(() => URL.revokeObjectURL(url), 10000);
+            }).catch(() => {
+                this.spin = false;
+                this.$toasted.show('Error al generar XLS', toast_options);
+            });
         },
-        clearrol () {
+
+        cleardiv() {
+            this.filters.division = 0
+        },
+        clearrol() {
             this.filters.rol = 0
         },
-        clearper () {
+        clearper() {
             this.filters.person = 0
         },
         cleardate() {
             this.filters.dstar = 0;
             this.filters.dend = 0
         },
-        getlist (pFil, pOrder, pPager) {
+        getlist(pFil, pOrder, pPager) {
             if (pFil !== undefined) { this.filters = pFil }
 
             if (pOrder !== undefined) { this.orders = pOrder }
@@ -139,7 +189,7 @@ new Vue({
 
                 url: urldomine + 'api/reports/list',
 
-                params: {start: this.pager.page - 1, take: this.pager.recordpage, filters: this.filters, orders: this.orders}
+                params: { start: this.pager.page - 1, take: this.pager.recordpage, filters: this.filters, orders: this.orders }
 
             }).then(response => {
 
