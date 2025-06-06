@@ -66,8 +66,8 @@ new Vue({
             timePicker: true,
             opens: 'left',
             cancelClass: "btn-danger",
-            startDate: moment().hour(8).minute(40),
-            endDate: moment().hour(8).add(9, 'hour').minute(10),
+            startDate: moment().startOf('month').startOf('day'),
+            endDate: moment().endOf('day'),
             locale: {
                 applyLabel: "Aplicar",
                 cancelLabel: "Anular",
@@ -80,18 +80,20 @@ new Vue({
                 format: 'D-M-Y hh:mm A'
             }
         }, (start, end, label) => {
-
-            this.filters.dstar = start.format('YYYY-MM-DD H:mm');
-
-            this.filters.dend = end.format('YYYY-MM-DD H:mm');
-
+            this.filters.dstar = start.format('YYYY-MM-DD HH:mm:ss');
+            this.filters.dend = end.format('YYYY-MM-DD HH:mm:ss');
         });
+
+        const picker = $('input[name="datetimes"]').data('daterangepicker');
+
+        this.filters.dstar = picker.startDate.format('YYYY-MM-DD HH:mm:ss');
+        this.filters.dend = picker.endDate.format('YYYY-MM-DD HH:mm:ss');
 
         this.formData = new FormData();
 
         this.getlist();
-
     },
+
     methods: {
         getpdf() {
             this.spin = true;
