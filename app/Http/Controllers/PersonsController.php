@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Contracts\Cache\Store;
 use Intervention\Image\Facades\Image;
 use Illuminate\Support\Facades\Storage;
+use App\Mail\CheckConfirmation;
+use Illuminate\Support\Facades\Mail;
 
 class PersonsController extends Controller
 {
@@ -37,19 +39,20 @@ class PersonsController extends Controller
 
         $datos = Person::with('Status', 'Rols', 'Divisions');
 
-        if ($filters['value'] !== '') $datos->where($filters['field'], 'LIKE', '%' . $filters['value'] . '%');
+        if ($filters['value'] !== '')
+            $datos->where($filters['field'], 'LIKE', '%' . $filters['value'] . '%');
 
         $datos = $datos->orderby($orders['field'], $orders['type']);
 
         $total = $datos->select('*')->count();
 
-        $list =  $datos->skip($skip)->take($request['take'])->get();
+        $list = $datos->skip($skip)->take($request['take'])->get();
 
         $result = [
 
             'total' => $total,
 
-            'list' =>  $list,
+            'list' => $list,
 
             'rols' => Rol::all(),
 
@@ -74,7 +77,7 @@ class PersonsController extends Controller
 
             PersonRol::create([
 
-                'person_id' =>  $person_id,
+                'person_id' => $person_id,
 
                 'rol_id' => $rl
             ]);
@@ -85,7 +88,7 @@ class PersonsController extends Controller
 
             PersonDivision::create([
 
-                'person_id' =>  $person_id,
+                'person_id' => $person_id,
 
                 'division_id' => $dl
             ]);
@@ -112,7 +115,7 @@ class PersonsController extends Controller
 
             PersonRol::create([
 
-                'person_id' =>  $id,
+                'person_id' => $id,
 
                 'rol_id' => $rl
             ]);
@@ -124,7 +127,7 @@ class PersonsController extends Controller
 
             PersonDivision::create([
 
-                'person_id' =>  $id,
+                'person_id' => $id,
 
                 'division_id' => $dl
             ]);
@@ -150,51 +153,100 @@ class PersonsController extends Controller
     {
         $validated = $request->validate([
             'token' => 'required|min:2'
+        ], [
+            'token.required' => 'El código es obligatorio.',
+            'token.min' => 'El código debe tener al menos 2 dígitos.',
         ]);
 
         $data = $request->all();
         $person = Person::where('token', $data['token'])->first();
 
         if (empty($person)) {
-            return response()->json('No esta registrado!', 500);
+            return response()->json('No está registrado!', 500);
         }
 
-        //$entradasalida = PersonCheck::where('person_id', $person->id)->where(DB::raw('DAY(moment)'), Carbon::now()->day)->update(['moment_exit' => Carbon::now()->format('H:i:s')]);
+        if (!isset($data['accion'])) {
+            return response()->json('Acción no definida', 500);
+        }
 
-        // Comprobar si existe un registro de hoy con moment_enter relleno y moment_exit vacío
-        $registroHoy = PersonCheck::where('person_id', $person->id)
-            ->whereNotNull('moment_enter')
+        if ($data['accion'] === 'entrada') {
+            return $this->checkEntrada($data, $person);
+        }
+
+        if ($data['accion'] === 'salida') {
+            return $this->checkSalida($data, $person);
+        }
+
+        return response()->json('Acción no válida', 500);
+    }
+
+    protected function checkEntrada($data, $person)
+    {
+        $entradaAbierta = PersonCheck::where('person_id', $person->id)
             ->whereNull('moment_exit')
-            ->where('motive_id', 0) //aseguramos que es el registro de entrada
+            ->where('motive_id', 0)
             ->first();
 
-        if ($registroHoy) {
-            // Verificar si la fecha del registro es de hoy o de ayer
-            $fechaRegistro = Carbon::createFromFormat('d/m/Y H:i', $registroHoy->moment)->startOfDay();
-
-            //Si el registro de entrada sin salida es de hoy se actualiza la salida con la hora actual
-            if ($fechaRegistro->isToday()) {
-                if (!empty($data['motive_id'])) {
-                    return $this->checkMotive($data, $registroHoy, $person);
-                } else {
-                    $registroHoy->update(['moment_exit' => Carbon::now()->format('Y-m-d H:i:s')]);
-                    return response()->json('Se ha realizado la salida correctamente. Gracias ' . $person->names, 200);
-                }
-            }
-            //Si el registro de entrada sin salida es de ayer se informa al usuario
-            elseif ($fechaRegistro->isYesterday()) {
-                return response()->json('Tiene una entrada activa sin una salida con fecha de ayer ' . $fechaRegistro->toDateString(), 200);
-            }
-            // Si el registro de entrada sin salida no es de hoy ni de ayer se informa al usuario
-            else {
-                return response()->json('El registro con fecha' . $fechaRegistro, 200);
-            }
-        } else {
-            if (!empty($data['motive_id'])) {
-                return response()->json('Todavía no has hecho registro de entrada ' . $person->names, 200);
-            }
-            return $this->checkin(new Request($data));
+        if ($entradaAbierta) {
+            return response()->json('Ya tienes una entrada activa. Debes registrar una salida antes.', 400);
         }
+
+        $data['motive_id'] = 0;
+        return $this->registrarEntrada($data, $person);
+    }
+
+    protected function checkSalida($data, $person)
+    {
+        $entradaAbierta = PersonCheck::where('person_id', $person->id)
+            ->whereNull('moment_exit')
+            ->where('motive_id', 0)
+            ->first();
+
+        if ($entradaAbierta) {
+            $entradaAbierta->update([
+                'moment_exit' => Carbon::now()->format('Y-m-d H:i:s')
+            ]);
+
+            Mail::to($person->email)->send(new CheckConfirmation($person, 'salida', now()));
+
+            return response()->json('Salida registrada con éxito. Gracias ' . $person->names, 200);
+        }
+
+        PersonCheck::create([
+            'person_id' => $person->id,
+            'moment' => Carbon::now(),
+            'moment_enter' => null,
+            'moment_exit' => Carbon::now()->format('Y-m-d H:i:s'),
+            'division_id' => $data['division_id'] ?? null,
+            'motive_id' => 0,
+            'note' => 'Entrada automática (marcado solo salida)',
+            'url_screen' => null,
+            'check_ip' => request()->ip()
+        ]);
+
+        Mail::to($person->email)->send(new CheckConfirmation($person, 'salida', now()));
+
+        return response()->json('Salida registrada sin entrada previa. Entrada automática generada.', 200);
+    }
+
+    protected function registrarEntrada($data, $person)
+    {
+        $moment = Carbon::now();
+
+        PersonCheck::create([
+            'person_id' => $person->id,
+            'moment' => $moment,
+            'moment_enter' => $moment->format('Y-m-d H:i:s'),
+            'division_id' => $data['division_id'],
+            'motive_id' => 0,
+            'note' => $data['note'] ?? '',
+            'url_screen' => null,
+            'check_ip' => request()->ip()
+        ]);
+
+        Mail::to($person->email)->send(new CheckConfirmation($person, 'entrada', $moment));
+
+        return response()->json('Entrada registrada con éxito. Bienvenido ' . $person->names, 200);
     }
 
     public function checkin(Request $request)
