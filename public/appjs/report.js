@@ -31,7 +31,7 @@ new Vue({
                 dend: moment().hour(8).add(9, 'hour').minute(10),
             },
             orders: {
-                field: 'persons_checks.moment',
+                field: 'persons_checks.id',
                 type: 'asc'
             },
             pager: {
@@ -95,6 +95,9 @@ new Vue({
     },
 
     methods: {
+        formatFecha(fecha) {
+            return fecha ? moment(fecha).format('DD/MM/YY HH:mm') : '-';
+        },
         getpdf() {
             this.spin = true;
 

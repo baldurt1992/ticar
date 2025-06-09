@@ -13,7 +13,7 @@
 <body>
 <div class="container containerA">
     <div class="flex-row justify-content-center">
-        <img class="d-inline-block align-top" style="width: 105px; margin-bottom: 20px" src="images/shards-dashboards-logo.svg" alt="Chekador personal">
+        <img class="d-inline-block align-top" style="width: 105px; margin-bottom: 20px" src="images/logo.webp" alt="Chekador personal">
         <div class="card" style="width: 395px">
             <div class="card-header text-left">Autenticar en chequeador de personal</div>
             <div class="card-body">

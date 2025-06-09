@@ -16,15 +16,20 @@
                 <td style="padding: 5px 5px 5px 10px; border-bottom: 1px solid rgba(169,169,169,0.29)">{{$ls['div']}}</td>
                 <td style="padding: 5px 5px 5px 10px; border-bottom: 1px solid rgba(169,169,169,0.29)">{{$ls['rol']}}</td>
                 <td style="padding: 5px 5px 5px 10px; border-bottom: 1px solid rgba(169,169,169,0.29);text-align: right">
-                    {{$ls['token']}}</td>
+                    {{$ls['token']}}
+                </td>
                 <td style="padding: 5px 5px 5px 10px; border-bottom: 1px solid rgba(169,169,169,0.29);text-align: right">
-                    {{$ls['names']}}</td>
+                    {{$ls['names']}}
+                </td>
                 <td style="padding: 5px 5px 5px 10px; border-bottom: 1px solid rgba(169,169,169,0.29);text-align: right">
-                    {{ $ls['moment_enter'] ?? '-' }}</td>
+                    {{ $ls['moment_enter'] ? \Carbon\Carbon::parse($ls['moment_enter'])->format('d/m/y H:i') : '-' }}
+                </td>
                 <td style="padding: 5px 5px 5px 10px; border-bottom: 1px solid rgba(169,169,169,0.29);text-align: right">
-                    {{ $ls['moment_exit'] ?? '-' }}</td>
+                    {{ $ls['moment_exit'] ? \Carbon\Carbon::parse($ls['moment_exit'])->format('d/m/y H:i') : '-' }}
+                </td>
                 <td style="padding: 5px 5px 5px 10px; border-bottom: 1px solid rgba(169,169,169,0.29);text-align: right">
-                    {{$ls['hours']}}</td>
+                    {{$ls['hours']}}
+                </td>
             </tr>
         @endforeach
     </tbody>
