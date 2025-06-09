@@ -52,18 +52,7 @@ new Vue({
                 .then(stream => {
                     this.video.srcObject = stream;
                 })
-                .catch(err => {
-                    let msg = 'No se pudo acceder a la cámara.';
-
-                    if (err.name === 'NotAllowedError') {
-                        msg = 'Por favor, permite el acceso a la cámara en tu navegador.';
-                    } else if (err.name === 'NotReadableError') {
-                        msg = 'La cámara está siendo utilizada por otra aplicación.';
-                    } else if (err.name === 'OverconstrainedError') {
-                        msg = 'No se encontraron cámaras compatibles con los requerimientos.';
-                    }
-
-                    this.$toasted.global.error({ message: msg });
+                .catch(() => {
                     this.video.style.display = 'none';
                 });
         } else {
