@@ -4,7 +4,7 @@ Vue.use(Toasted);
 
 new Vue({
     el: '#app',
-    data () {
+    data() {
         return {
             file: null,
             formData: 0,
@@ -36,7 +36,7 @@ new Vue({
                 rols: [],
                 divisions: []
             },
-            listfield: [{name: 'Nombre', type: 'text', field: 'persons.name'}, {name: 'Dirección', type: 'text',  field: 'persons.address'}],
+            listfield: [{ name: 'Nombre', type: 'text', field: 'persons.name' }, { name: 'Dirección', type: 'text', field: 'persons.address' }],
             fieldtype: 'text',
             filters: {
                 descrip: 'Nombre',
@@ -54,7 +54,7 @@ new Vue({
             totalpage: 0,
             rols: [],
             divisions: [],
-            datas:[]
+            datas: []
 
         }
     },
@@ -63,7 +63,7 @@ new Vue({
             this.getlist()
         }
     },
-    mounted () {
+    mounted() {
 
         this.getlist();
 
@@ -72,7 +72,7 @@ new Vue({
     },
     methods: {
         valid: validd,
-        setfield (f){
+        setfield(f) {
 
             this.filters.value = '';
 
@@ -85,7 +85,7 @@ new Vue({
             this.fieldtype = f.type
 
         },
-        getlist (pFil, pOrder, pPager) {
+        getlist(pFil, pOrder, pPager) {
             if (pFil !== undefined) { this.filters = pFil }
 
             if (pOrder !== undefined) { this.orders = pOrder }
@@ -99,7 +99,7 @@ new Vue({
 
                 url: urldomine + 'api/persons/list',
 
-                params: {start: this.pager.page - 1, take: this.pager.recordpage, filters: this.filters, orders: this.orders}
+                params: { start: this.pager.page - 1, take: this.pager.recordpage, filters: this.filters, orders: this.orders }
 
             }).then(response => {
 
@@ -120,10 +120,10 @@ new Vue({
                 this.$toasted.show(e.response.data, toast_options);
             })
         },
-        getdata (it) {
+        getdata(it) {
             location.href = urldomine + 'checks/' + it.id
         },
-        add () {
+        add() {
             this.title = 'Añadir trabajador';
 
             this.item.names = '';
@@ -147,15 +147,15 @@ new Vue({
             this.onview('new')
 
         },
-        edit (it) {
+        edit(it) {
 
             this.item = JSON.parse(JSON.stringify(it));
 
-            this.item.created_at = fixdate (new Date(this.item.created_at));
+            this.item.created_at = fixdate(new Date(this.item.created_at));
 
-            this.persons.rols = this.item.rols.map(i => {return i.rol_id});
+            this.persons.rols = this.item.rols.map(i => { return i.rol_id });
 
-            this.persons.divisions = this.item.divisions.map(i => {return i.division_id});
+            this.persons.divisions = this.item.divisions.map(i => { return i.division_id });
 
             this.act = 'put';
 
@@ -164,7 +164,7 @@ new Vue({
             this.onview('new')
 
         },
-        save () {
+        save() {
 
             this.spin = true;
 
@@ -208,7 +208,7 @@ new Vue({
             })
 
         },
-        delitem () {
+        delitem() {
 
             this.spin = true;
 
@@ -246,7 +246,7 @@ new Vue({
             $('#modaldelete').modal('show')
 
         },
-        close () {
+        close() {
 
             this.add();
 
@@ -254,17 +254,17 @@ new Vue({
 
         },
 
-        pass () {
+        pass() {
 
-           let name = this.item.name !== '';
+            let name = this.item.name !== '';
 
-           let token = this.item.token !== '';
+            let token = this.item.token !== '';
 
-           let address = this.item.address !== '';
+            let address = this.item.address !== '';
 
-           let email = /^(([^<>()[\].,;:\s@"]+(\.[^<>()[\].,;:\s@"]+)*)|(".+"))@(([^<>()[\].,;:\s@"]+\.)+[^<>()[\].,;:\s@"]{2,})$/i.test(this.item.email);
+            let email = /^(([^<>()[\].,;:\s@"]+(\.[^<>()[\].,;:\s@"]+)*)|(".+"))@(([^<>()[\].,;:\s@"]+\.)+[^<>()[\].,;:\s@"]{2,})$/i.test(this.item.email);
 
-           return name && address && token && email
+            return name && address && token && email
         },
         getfile(e) {
 
@@ -281,7 +281,7 @@ new Vue({
                 this.formData.append('importfile', this.file)
             }
         },
-        onview (pro) {
+        onview(pro) {
 
             for (let property in this.views) {
 

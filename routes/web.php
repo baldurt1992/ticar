@@ -58,7 +58,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/motives', [MotivesController::class, 'index'])->name('motives');
     Route::get('/checks/{id?}', [CheckController::class, 'index'])->name('check');
     Route::get('/report', [ReportController::class, 'index'])->name('report');
-    Route::post('/report/xls', [ReportController::class, 'export'])->name('reportxls');
+    
 });
 
 Route::get('/home', [HomeController::class, 'index'])->name('home');

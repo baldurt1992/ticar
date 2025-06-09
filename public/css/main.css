@@ -1,16 +1,19 @@
 #camara {
     border: 2px solid black;
-    height:100px;
-   
+    height: 100px;
+
 }
+
 .fecha {
     font-size: 25px;
     font-weight: bold;
 }
+
 .tiempo {
     font-size: 45px;
     letter-spacing: 10px;
 }
+
 .containerA {
     height: 100vh;
     display: flex;
@@ -21,7 +24,9 @@
     width: 100vw;
 }
 
-[v-cloak] {display: none}
+[v-cloak] {
+    display: none
+}
 
 .mouse {
     cursor: pointer;
@@ -52,9 +57,11 @@ p.tiempo {
 select:required:invalid {
     color: gray;
 }
+
 option[value=""][disabled] {
     display: none;
 }
+
 option {
     color: black;
 }
@@ -66,4 +73,36 @@ option {
 .blackr {
     text-align: right;
     color: #0a0302;
+}
+
+.toasted {
+    border-radius: 4px !important;
+    padding: 20px 30px !important;
+    min-height: 44px;
+    line-height: 1.4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: normal !important;
+    box-shadow: none !important;
+    font-size: 1.3rem !important;
+    text-align: center !important;
+}
+
+.toasted.bg-success {
+    background-color: #28a745 !important;
+    color: #fff !important;
+}
+
+.toasted.bg-danger {
+    background-color: #c51d2e !important;
+    color: #fff !important;
+}
+
+.toast-center-screen {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 9999 !important;
 }
