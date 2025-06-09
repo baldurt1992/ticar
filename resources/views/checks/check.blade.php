@@ -8,28 +8,31 @@
         </div>
     </div>
 
-        <div v-if="views.list" class="row">
-            <div class="col-lg-12">
-                <div class="card card-small mb-4">
-                    <div class="card-header border-bottom">
-                        <div class="row">
-                            <div class="col-lg-1 col-sm-1 text-center text-sm-left mb-0">
-                                <button class="btn btn-link btn-sm" @click="back()"><i class="fa fa-chevron-circle-left "></i> Regresar</button>
-                            </div>
-                            <div class="col-lg-11 col-sm-1 text-center text-sm-left mb-0">
-                                <paginator :tpage="totalpage" :pager="pager" v-on:getresult="getlist"></paginator>
-                            </div>
+    <div v-if="views.list" class="row">
+        <div class="col-lg-12">
+            <div class="card card-small mb-4">
+                <div class="card-header border-bottom">
+                    <div class="row">
+                        <div class="col-lg-1 col-sm-1 text-center text-sm-left mb-0">
+                            <button class="btn btn-link btn-sm" @click="back()"><i class="fa fa-chevron-circle-left "></i>
+                                Regresar</button>
+                        </div>
+                        <div class="col-lg-11 col-sm-1 text-center text-sm-left mb-0">
+                            <paginator :tpage="totalpage" :pager="pager" v-on:getresult="getlist"></paginator>
                         </div>
                     </div>
-                    <div class="card-body p-0 pb-3">
-                        <table class="table mb-0 table-hover">
-                            <thead class="bg-light">
+                </div>
+                <div class="card-body p-0 pb-3">
+                    <table class="table mb-0 table-hover">
+                        <thead class="bg-light">
                             <tr>
                                 <th scope="col" class="border-0"></th>
                                 <th scope="col" class="border-0">
                                     <div class="input-group">
-                                        <input type="date" class="form-control" v-model="moment" ><div class="input-group-append">
-                                            <span class="input-group-text" id="basic-addon2"><i class="fa fa-filter"></i></span>
+                                        <input type="date" class="form-control" v-model="moment">
+                                        <div class="input-group-append">
+                                            <span class="input-group-text" id="basic-addon2"><i
+                                                    class="fa fa-filter"></i></span>
                                         </div>
                                     </div>
 
@@ -37,11 +40,12 @@
                                 <th scope="col" class="border-0">
 
                                     <div class="input-group">
-                                        <select class="form-control custom-select"  v-model="motive">
-                                            <option v-for="mot in  motives" :value="mot.id">@{{ mot.motive }}</option>
+                                        <select class="form-control custom-select" v-model="motive">
+                                            <option v-for="mot in  motives" :value="mot . id">@{{ mot.motive }}</option>
                                         </select>
                                         <div class="input-group-append">
-                                            <span class="input-group-text" id="basic-addon2"><i class="fa fa-filter"></i></span>
+                                            <span class="input-group-text" id="basic-addon2"><i
+                                                    class="fa fa-filter"></i></span>
                                         </div>
                                     </div>
                                 </th>
@@ -58,36 +62,38 @@
                                 <th scope="col" class="border-0">Nota</th>
                                 <th scope="col" class="border-0"></th>
                             </tr>
-                            </thead>
-                            <tbody>
+                        </thead>
+                        <tbody>
                             <tr v-for="entity in lists" class="mouse">
                                 <td>@{{ entity.check_ip }}</td>
                                 <td>@{{ entity.moment.slice(0, 10) }}</td>
-                                <td>@{{ entity.moment_enter }}</td>
-                                <td>@{{ entity.moment_exit }}</td>
+                                <td>@{{ formatFecha(entity.moment_enter) }}</td>
+                                <td>@{{ formatFecha(entity.moment_exit) }}</td>
                                 <td>@{{ entity.division }}</td>
                                 <td>@{{ entity.motive }}</td>
                                 <td>@{{ entity.note }}</td>
                                 <td>
-                                    <button class="btn btn-danger btn-sm" @click="showdelete(entity)"><i class="fa fa-eraser"></i></button>
+                                    <button class="btn btn-danger btn-sm" @click="showdelete(entity)"><i
+                                            class="fa fa-eraser"></i></button>
                                 </td>
                             </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="card-footer">
-                        <div class="row">
-                            <div class="col-lg-1 col-sm-1 text-center text-sm-left mb-0">
-                                <button class="btn btn-link btn-sm" @click="back()"><i class="fa fa-chevron-circle-left "></i> Regresar</button>
-                            </div>
-                            <div class="col-lg-11 col-sm-1 text-center text-sm-left mb-0">
-                                <paginator :tpage="totalpage" :pager="pager" v-on:getresult="getlist"></paginator>
-                            </div>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer">
+                    <div class="row">
+                        <div class="col-lg-1 col-sm-1 text-center text-sm-left mb-0">
+                            <button class="btn btn-link btn-sm" @click="back()"><i class="fa fa-chevron-circle-left "></i>
+                                Regresar</button>
+                        </div>
+                        <div class="col-lg-11 col-sm-1 text-center text-sm-left mb-0">
+                            <paginator :tpage="totalpage" :pager="pager" v-on:getresult="getlist"></paginator>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
     <div id="img" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
@@ -99,7 +105,7 @@
                     </button>
                 </div>
                 <div class="modal-body">
-                    <img :src="'/'+ img" alt="" width="98%">
+                    <img :src="'/' + img" alt="" width="98%">
                 </div>
                 <div class="modal-footer">
                     <a href="#" data-dismiss="modal" class="btn btn-default  btn-sm">Cerrar</a>
@@ -108,8 +114,8 @@
         </div>
     </div>
 
-@component('components.eliminar')@endcomponent
-@component('components.spiner')@endcomponent
+    @component('components.eliminar')@endcomponent
+    @component('components.spiner')@endcomponent
 @endsection
 @section('script')
     @parent

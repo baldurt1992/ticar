@@ -54,7 +54,8 @@
         <div style="width: 28%; padding-left: 15px;">
             <div style="font-weight:bolder; font-size: 16px;">Rango fecha</div>
             <div style="padding-bottom: 10px; font-size: 12px;">{{ date('d/m/Y H:i:s', strtotime($filters['dstar']))}} a
-                {{ date('d/m/Y H:i:s', strtotime($filters['dend']))}} </div>
+                {{ date('d/m/Y H:i:s', strtotime($filters['dend']))}}
+            </div>
         </div>
     </div>
 
@@ -75,24 +76,31 @@
                 @foreach($list as $ls)
                     <tr style="font-size: 10px;">
                         <td style="padding: 5px 5px 5px 10px; border-bottom: 1px solid rgba(169,169,169,0.29)">
-                            {{$ls['div']}}</td>
+                            {{$ls['div']}}
+                        </td>
                         <td style="padding: 5px 5px 5px 10px; border-bottom: 1px solid rgba(169,169,169,0.29)">
-                            {{$ls['rol']}}</td>
+                            {{$ls['rol']}}
+                        </td>
                         <td
                             style="padding: 5px 5px 5px 10px; border-bottom: 1px solid rgba(169,169,169,0.29);text-align: right">
-                            {{$ls['token']}}</td>
+                            {{$ls['token']}}
+                        </td>
                         <td
                             style="padding: 5px 5px 5px 10px; border-bottom: 1px solid rgba(169,169,169,0.29);text-align: right">
-                            {{$ls['names']}}</td>
+                            {{$ls['names']}}
+                        </td>
                         <td
                             style="padding: 5px 5px 5px 10px; border-bottom: 1px solid rgba(169,169,169,0.29);text-align: right">
-                            {{ $ls['moment_enter'] ?? '-' }}</td>
+                            {{ $ls['moment_enter'] ? \Carbon\Carbon::parse($ls['moment_enter'])->format('d/m/y H:i') : '-' }}
+                        </td>
                         <td
                             style="padding: 5px 5px 5px 10px; border-bottom: 1px solid rgba(169,169,169,0.29);text-align: right">
-                            {{ $ls['moment_exit'] ?? '-' }}</td>
+                            {{ $ls['moment_enter'] ? \Carbon\Carbon::parse($ls['moment_enter'])->format('d/m/y H:i') : '-' }}
+                        </td>
                         <td
                             style="padding: 5px 5px 5px 10px; border-bottom: 1px solid rgba(169,169,169,0.29);text-align: right">
-                            {{$ls['hours']}}</td>
+                            {{$ls['hours']}}
+                        </td>
                     </tr>
                 @endforeach
             </tbody>

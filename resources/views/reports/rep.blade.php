@@ -87,8 +87,8 @@
                                 <td>@{{ entity.rol}}</td>
                                 <td>@{{ entity.token }}</td>
                                 <td>@{{ entity.names }}</td>
-                                <td>@{{ entity.moment_enter ?? '-' }}</td>
-                                <td>@{{ entity.moment_exit ?? '-' }}</td>
+                                <td>@{{ formatFecha(entity.moment_enter) }}</td>
+                                <td>@{{ formatFecha(entity.moment_exit) }}</td>
                                 <td>@{{ entity.hours }}</td>
                             </tr>
                         </tbody>

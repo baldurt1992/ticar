@@ -47,14 +47,29 @@ new Vue({
         this.video = document.querySelector("#camara");
         this.canvas = document.getElementById("canvas");
 
-        if (this.soporteUserMedia()) {
-            this._getUserMedia({ video: true }, (stream) => {
-                this.video.srcObject = stream;
-            }, er => {
-                this.$toasted.global.error({ message: er });
-            });
+        if (navigator.mediaDevices?.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    this.video.srcObject = stream;
+                })
+                .catch(err => {
+                    let msg = 'No se pudo acceder a la cámara.';
+
+                    if (err.name === 'NotAllowedError') {
+                        msg = 'Por favor, permite el acceso a la cámara en tu navegador.';
+                    } else if (err.name === 'NotFoundError') {
+                        msg = 'No se encontró ninguna cámara conectada.';
+                    } else if (err.name === 'NotReadableError') {
+                        msg = 'La cámara está siendo utilizada por otra aplicación.';
+                    } else if (err.name === 'OverconstrainedError') {
+                        msg = 'No se encontraron cámaras compatibles con los requerimientos.';
+                    }
+
+                    this.$toasted.global.error({ message: msg });
+                    this.video.style.display = 'none';
+                });
         } else {
-            this.$toasted.global.error({ message: 'Lo siento. El navegador no soporta esta característica' });
+            this.$toasted.global.error({ message: 'Tu navegador no soporta la cámara.' });
         }
 
         axios.get(urldomine + 'api/motives/motives').then(res => {
@@ -166,12 +181,6 @@ new Vue({
         },
         deteteNCodigo() {
             this.user.token = this.user.token.slice(0, -1);
-        },
-        soporteUserMedia() {
-            return !!(navigator.mediaDevices?.getUserMedia || navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.msGetUserMedia);
-        },
-        _getUserMedia() {
-            return (navigator.getUserMedia || navigator.mozGetUserMedia || navigator.mediaDevices.getUserMedia || navigator.webkitGetUserMedia || navigator.msGetUserMedia).apply(navigator, arguments);
         },
         fecha() {
             let fecha = new Date();
