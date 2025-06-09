@@ -57,8 +57,6 @@ new Vue({
 
                     if (err.name === 'NotAllowedError') {
                         msg = 'Por favor, permite el acceso a la cámara en tu navegador.';
-                    } else if (err.name === 'NotFoundError') {
-                        msg = 'No se encontró ninguna cámara conectada.';
                     } else if (err.name === 'NotReadableError') {
                         msg = 'La cámara está siendo utilizada por otra aplicación.';
                     } else if (err.name === 'OverconstrainedError') {
