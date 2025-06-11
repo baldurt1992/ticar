@@ -2,10 +2,9 @@
 
 namespace App\Exports;
 
-use Illuminate\Contracts\View\View;
-use Maatwebsite\Excel\Concerns\FromView;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
-class PersonCheckXls implements FromView
+class PersonCheckXls implements WithMultipleSheets
 {
     protected $list;
 
@@ -14,8 +13,16 @@ class PersonCheckXls implements FromView
         $this->list = $list;
     }
 
-    public function view(): View
+    public function sheets(): array
     {
-        return view('reports.xls', ['list' => $this->list]);
+        $agrupados = collect($this->list)->groupBy('token');
+
+        $sheets = [];
+
+        foreach ($agrupados as $token => $registros) {
+            $sheets[] = new PersonCheckPerUserSheet($token, $registros);
+        }
+
+        return $sheets;
     }
 }

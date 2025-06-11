@@ -6,6 +6,7 @@ new Vue({
     el: '#app',
     data() {
         return {
+            total_hours: '00:00:00',
             file: null,
             formData: 0,
             delobj: '',
@@ -78,6 +79,12 @@ new Vue({
 
     },
     methods: {
+        getMotiveName(motive_id) {
+            if (!motive_id || motive_id === 0) return '-';
+            const motive = this.motives.find(m => m.id == motive_id);
+            return motive ? motive.motive : '-';
+        },
+
         formatFecha(fecha) {
             return fecha ? moment(fecha).format('DD/MM/YY HH:mm') : '-';
         },
@@ -115,6 +122,7 @@ new Vue({
                 params: { start: this.pager.page - 1, take: this.pager.recordpage, filters: this.filters, orders: this.orders }
 
             }).then(response => {
+                this.total_hours = response.data.total_hours;
 
                 this.spin = false;
 

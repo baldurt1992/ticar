@@ -29,7 +29,7 @@
 
                             <video autoplay="true" class="form-control text-center fecha" id="camara"></video>
                         </div>
-                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 mt-1 keypad">
+                        <div class="mt-1 keypad">
                             <button class="btn btn-info btn-lg mb-1 keypad-button" data-key="0"
                                 @click="setNCodigo(0)">0</button>
                             <button class="btn btn-info btn-lg mb-1 keypad-button" data-key="1"
@@ -66,8 +66,16 @@
                                 @click="openConfirm('entrada')">ENTRAR</button>
                             <button :disabled="user . token . length <= 0" class="btn btn-danger btn-lg"
                                 @click="openConfirm('salida')">SALIR</button>
-                            <button :disabled="user . token . length <= 0" class="btn btn-warning btn-lg"
-                                @click="showOb()">OTR</button>
+                            <button :disabled="!entradaNormalActiva" class="btn btn-warning btn-lg" @click="showOb()"
+                                :title="!entradaNormalActiva
+        ? 'Debes marcar una entrada antes de registrar OTROS'
+        : (pending_check_motive > 0
+            ? 'Ya tienes una entrada abierta con motivo ' + getMotivoNombre(pending_check_motive)
+            : '')">
+         OTR
+                            </button>
+
+
                             <canvas id="canvas" style="display: none;"></canvas>
                         </div>
                     </div>
@@ -173,6 +181,26 @@
             </div>
         </div>
 
+    </div>
+
+    <div id="modal-otros-activo" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="modalOtrosActivoLabel"
+        aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title text-dark" id="modalOtrosActivoLabel">Motivo OTROS activo</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body text-dark">
+                    <p id="mensaje-otros-activo"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Entendido</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>

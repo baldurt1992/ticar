@@ -82,15 +82,23 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="entity in lists" class="mouse">
-                                <td>@{{ entity.div}}</td>
-                                <td>@{{ entity.rol}}</td>
-                                <td>@{{ entity.token }}</td>
-                                <td>@{{ entity.names }}</td>
-                                <td>@{{ formatFecha(entity.moment_enter) }}</td>
-                                <td>@{{ formatFecha(entity.moment_exit) }}</td>
-                                <td>@{{ entity.hours }}</td>
-                            </tr>
+                            <template v-for="(group, token) in groupedLists">
+                                <tr v-for="item in group" :key="item . id">
+                                    <td>@{{ item.div }}</td>
+                                    <td>@{{ item.rol }}</td>
+                                    <td>@{{ item.token }}</td>
+                                    <td>@{{ item.names }}</td>
+                                    <td>@{{ formatFecha(item.moment_enter) }}</td>
+                                    <td>@{{ formatFecha(item.moment_exit) }}</td>
+                                    <td>@{{ item.hours }}</td>
+                                </tr>
+                                <tr v-if="tokens_finalizados.map(String).includes(String(token))"
+                                    class="font-weight-bold bg-light">
+                                    <td colspan="6" class="text-right">Total:</td>
+                                    <td>@{{ totales_tokens[token] || '00:00' }}</td>
+                                    <td></td>
+                                </tr>
+                            </template>
                         </tbody>
                     </table>
                 </div>
