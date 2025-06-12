@@ -31,7 +31,7 @@ class CheckController extends Controller
         }
 
         $datos->where('person_id', $filters['person_id']);
-        $datos = $datos->orderby($orders['field'], $orders['type']);
+        $datos = $datos->orderBy('moment', 'desc')->orderBy('id', 'desc');
 
         $datos->select(
             'persons_checks.id',

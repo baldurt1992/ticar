@@ -57,7 +57,8 @@ class ReportController extends Controller
             $datos->where('rols.id', $rol);
 
         $datos->whereBetween('moment', [$dstar, $dend]);
-        $datos->orderBy('moment', 'asc');
+        $datos->orderBy('persons.token')
+            ->orderBy('persons_checks.moment_enter', 'desc');
 
         $total = (clone $datos)->select('persons_checks.id')->count();
 
@@ -79,10 +80,8 @@ class ReportController extends Controller
             $salida = $registro->moment_exit ? Carbon::parse($registro->moment_exit) : null;
 
             if ($entrada && $salida) {
-                $diff = $entrada->diffInMinutes($salida);
-                $h = floor($diff / 60);
-                $m = str_pad($diff % 60, 2, '0', STR_PAD_LEFT);
-                $horas = "$h:$m";
+                $diff = $entrada->diffInSeconds($salida);
+                $horas = gmdate('H:i:s', $diff);
             } else {
                 $horas = '0:00';
             }
@@ -93,8 +92,8 @@ class ReportController extends Controller
                 'token' => $registro->token,
                 'div' => $registro->div,
                 'rol' => $registro->rol,
-                'moment_enter' => $registro->moment_enter,
-                'moment_exit' => $registro->moment_exit,
+                'moment_enter' => $registro->moment_enter ? Carbon::parse($registro->moment_enter)->timezone('UTC')->toIso8601String() : null,
+                'moment_exit' => $registro->moment_exit ? Carbon::parse($registro->moment_exit)->timezone('UTC')->toIso8601String() : null,
                 'hours' => $horas
             ];
         }
@@ -189,7 +188,8 @@ class ReportController extends Controller
             $datos->where('rols.id', $rol);
 
         $datos->whereBetween('moment', [$dstar, $dend]);
-        $datos->orderBy('moment', 'asc');
+        $datos->orderBy('persons.token')
+            ->orderBy('persons_checks.moment_enter', 'desc');
 
         $data = $datos->select(
             'persons.names',
@@ -302,9 +302,9 @@ class ReportController extends Controller
             $datos->where('rols.id', $rol);
 
         $datos->whereBetween('moment', [$dstar, $dend]);
-        $datos->orderBy('moment', 'asc');
+        $datos->orderBy('persons.token')
+            ->orderBy('persons_checks.moment_enter', 'desc');
 
-        // ⚠️ Elimina skip/take completamente
         $data = $datos->select(
             'persons.names',
             'persons.token',
@@ -322,10 +322,8 @@ class ReportController extends Controller
             $salida = $registro->moment_exit ? Carbon::parse($registro->moment_exit) : null;
 
             if ($entrada && $salida) {
-                $diff = $entrada->diffInMinutes($salida);
-                $h = floor($diff / 60);
-                $m = str_pad($diff % 60, 2, '0', STR_PAD_LEFT);
-                $horas = "$h:$m";
+                $diff = $entrada->diffInSeconds($salida);
+                $horas = gmdate('H:i:s', $diff);
             } else {
                 $horas = '0:00';
             }

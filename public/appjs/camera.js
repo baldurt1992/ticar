@@ -167,8 +167,26 @@ new Vue({
                         this.$toasted.global.error({ message: msg, className: 'toast-center-screen bg-danger text-white' });
                     });
             }
-        }
-        ,
+        },
+
+        marcarRegreso() {
+            $('#modal-otros-activo').modal('hide'); // 👈 Esto es lo que faltaba
+
+            this.actionType = 'salida';
+            this.user.motive_id = this.pending_check_motive;
+            this.user.note = '(regreso)';
+
+            axios.get(urldomine + 'api/divisions/data/' + this.user.token)
+                .then(res => {
+                    if (res.data.division.length > 0) {
+                        this.user.division_id = res.data.division[0].id;
+
+                        this.check();
+                    } else {
+                        this.$toasted.global.error({ message: 'No se encontraron divisiones para marcar regreso.' });
+                    }
+                });
+        },
 
         showOb() {
             axios.get(urldomine + 'api/divisions/data/' + this.user.token)
@@ -179,7 +197,7 @@ new Vue({
                     if (this.pending_check_motive > 0) {
                         const motivo = this.getMotivoNombre(this.pending_check_motive);
                         document.getElementById('mensaje-otros-activo').innerText =
-                            `Ya tienes una entrada abierta con motivo "${motivo}". Por favor ciérrala haciendo clic en SALIR antes de ingresar otro motivo.`;
+                            `Ya tienes una entrada registrada con motivo "${motivo}", ¿quieres marcar el regreso?`;
                         $('#modal-otros-activo').modal('show');
                         return;
                     }
@@ -271,7 +289,7 @@ new Vue({
                 });
         },
 
-        check() {
+        check(cerrarModalOtros = false) {
             this.video.pause();
             let contexto = this.canvas.getContext("2d");
             this.canvas.width = this.video.videoWidth;
@@ -286,25 +304,34 @@ new Vue({
                 accion: this.actionType
             })
                 .then(res => {
-                    const msg = res.data;
-                    if (typeof msg === 'string' && msg.includes('Todavía no has hecho registro de entrada')) {
-                        this.$toasted.show(msg, {
-                            className: 'bg-danger text-white',
-                            duration: 5000
-                        });
-                    } else {
-                        let mensaje = msg;
-                        if (this.user.motive_id > 0) {
-                            const motivo = this.getMotivoNombre(this.user.motive_id);
-                            mensaje = `Entrada registrada con motivo "${motivo}".`;
-                            $('#modalob').modal('hide');
-                        }
-                        this.$toasted.global.success({ message: mensaje, className: 'toast-center-screen bg-success text-white' });
+                    let mensaje = res.data;
+                    if (
+                        this.user.motive_id > 0 &&
+                        this.actionType === 'entrada' &&
+                        res.data.startsWith('Entrada registrada con éxito')
+                    ) {
+                        const motivo = this.getMotivoNombre(this.user.motive_id);
+                        mensaje = `Entrada registrada con motivo "${motivo}". Entrada generada.`;
+                    } else if (
+                        this.user.motive_id > 0 &&
+                        this.actionType === 'salida' &&
+                        res.data.startsWith('Salida registrada con éxito')
+                    ) {
+                        const motivo = this.getMotivoNombre(this.user.motive_id);
+                        mensaje = `Salida registrada con motivo "${motivo}".`;
                     }
+
+                    if (this.user.motive_id > 0 && this.actionType === 'entrada') {
+                        $('#modalob').modal('hide');
+                    }
+
+                    this.$toasted.global.success({
+                        message: mensaje,
+                        className: 'toast-center-screen bg-success text-white'
+                    });
                 })
                 .catch(er => {
                     let msg = 'Error inesperado';
-
                     if (typeof er.response?.data === 'string') {
                         msg = er.response.data;
                     } else if (er.response?.data?.message) {
@@ -322,13 +349,12 @@ new Vue({
                     this.user.motive_id = 0;
                     this.user.note = '';
                     this.user.division_id = 0;
+
                     setTimeout(() => {
                         this.actualizarPendingMotive();
                     }, 300);
                 });
         }
-
-
     },
 
     watch: {

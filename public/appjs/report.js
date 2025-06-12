@@ -116,7 +116,7 @@ new Vue({
         },
 
         formatFecha(fecha) {
-            return fecha ? moment(fecha).format('DD/MM/YY HH:mm') : '-';
+            return fecha ? moment.utc(fecha).local().format('DD/MM/YY HH:mm:ss') : '-';
         },
         getpdf() {
             this.spin = true;

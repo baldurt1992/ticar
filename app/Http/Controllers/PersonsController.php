@@ -205,6 +205,7 @@ class PersonsController extends Controller
         }
 
         return $this->registrarEntrada($data, $person);
+
     }
 
     protected function checkEntrada($data, $person)
@@ -235,6 +236,19 @@ class PersonsController extends Controller
             ->where('motive_id', '>', 0)
             ->first();
 
+        if ($entradaOtros && $data['note'] === '(regreso)') {
+            if ($entradaOtros->motive_id > 0 && $entradaOtros->motive) {
+                $motivoNombre = $entradaOtros->motive->motive;
+                $entradaOtros->update([
+                    'moment_exit' => now(),
+                    'note' => 'Salida generada desde motivo "' . $motivoNombre . '"'
+                ]);
+            }
+
+            Mail::to($person->email)->send(new CheckConfirmation($person, 'salida', now()));
+            return response()->json("Salida OTROS con motivo \"{$entradaOtros->motive->motive}\" cerrada correctamente.", 200);
+        }
+
         if ($entradaNormal && $entradaOtros) {
             $entradaNormal->update([
                 'moment_exit' => now(),
@@ -244,7 +258,7 @@ class PersonsController extends Controller
             $motivoNombre = optional($entradaOtros->motive)->motive ?? 'desconocido';
             $entradaOtros->update([
                 'moment_exit' => now(),
-                'note' => ($entradaOtros->note ?? '') . ' (salida automática)'
+                'note' => ($entradaOtros->note ?? '') . " (salida automática desde motivo \"$motivoNombre\")"
             ]);
 
             Mail::to($person->email)->send(new CheckConfirmation($person, 'salida', now()));
@@ -261,17 +275,26 @@ class PersonsController extends Controller
         }
 
         if ($entradaOtros) {
-            $motivoNombre = optional($entradaOtros->motive)->motive ?? 'desconocido';
-            $entradaOtros->update([
-                'moment_exit' => now(),
-                'note' => ($entradaOtros->note ?? '') . ' (salida automática)'
-            ]);
+            if ($entradaOtros->motive_id > 0 && $entradaOtros->motive) {
+                $motivoNombre = $entradaOtros->motive->motive;
+                $entradaOtros->update([
+                    'moment_exit' => now(),
+                    'note' => ($entradaOtros->note ?? '') . ' (salida automática desde motivo "' . $motivoNombre . '")'
+                ]);
 
-            Mail::to($person->email)->send(new CheckConfirmation($person, 'salida', now()));
-            return response()->json("Salida OTROS con motivo \"$motivoNombre\" cerrada automáticamente.", 200);
+                Mail::to($person->email)->send(new CheckConfirmation($person, 'salida', now()));
+                return response()->json("Salida OTROS con motivo \"$motivoNombre\" cerrada automáticamente.", 200);
+            } else {
+                $entradaOtros->update([
+                    'moment_exit' => now(),
+                    'note' => ($entradaOtros->note ?? '') . ' (salida automática)'
+                ]);
+
+                Mail::to($person->email)->send(new CheckConfirmation($person, 'salida', now()));
+                return response()->json('Salida registrada sin entrada previa. Entrada automática generada.', 200);
+            }
         }
 
-        // Ninguna abierta: crea salida automática
         PersonCheck::create([
             'person_id' => $person->id,
             'moment' => now(),

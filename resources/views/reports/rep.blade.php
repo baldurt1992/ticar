@@ -83,6 +83,13 @@
                         </thead>
                         <tbody>
                             <template v-for="(group, token) in groupedLists">
+                                <tr v-if="tokens_finalizados.map(String).includes(String(token))" class="font-weight-bold"
+                                    style="background-color: #d6d6d6;">
+                                    <td colspan=" 6" class="text-right">
+                                        Total horas de <strong>@{{ group[0].names }}</strong>:
+                                    </td>
+                                    <td>@{{ totales_tokens[token] || '00:00' }}</td>
+                                </tr>
                                 <tr v-for="item in group" :key="item . id">
                                     <td>@{{ item.div }}</td>
                                     <td>@{{ item.rol }}</td>
@@ -91,12 +98,6 @@
                                     <td>@{{ formatFecha(item.moment_enter) }}</td>
                                     <td>@{{ formatFecha(item.moment_exit) }}</td>
                                     <td>@{{ item.hours }}</td>
-                                </tr>
-                                <tr v-if="tokens_finalizados.map(String).includes(String(token))"
-                                    class="font-weight-bold bg-light">
-                                    <td colspan="6" class="text-right">Total:</td>
-                                    <td>@{{ totales_tokens[token] || '00:00' }}</td>
-                                    <td></td>
                                 </tr>
                             </template>
                         </tbody>

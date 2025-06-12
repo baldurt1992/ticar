@@ -86,7 +86,7 @@ new Vue({
         },
 
         formatFecha(fecha) {
-            return fecha ? moment(fecha).format('DD/MM/YY HH:mm') : '-';
+            return fecha ? moment(fecha).local().format('DD/MM/YY HH:mm:ss') : '-';
         },
         imgFull(x) {
             this.img = x;
