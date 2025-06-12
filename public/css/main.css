@@ -197,3 +197,7 @@ option {
 .entry-buttons {
     gap: 4px;
 }
+
+.overflow-persons {
+    overflow-x: scroll !important;
+}

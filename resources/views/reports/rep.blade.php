@@ -5,103 +5,103 @@
         <div class="col-lg-12">
             <div class="card card-small mb-4">
                 <div class="card-header border-bottom">
-                    <div class="row">
-                        <div class="col-lg-2 col-sm-2 text-center text-sm-left mb-0">
-                            <button class="btn btn-success" @click="getpdf()"><i class="fa fa-file-pdf "></i></button>
-                            <button class="btn btn-success" @click="getxls()"><i class="fa fa-file-excel"></i> </button>
-                        </div>
-                        <div class="col-lg-11 col-sm-1 text-center text-sm-left mb-0">
+                    <div class="row align-items-center mb-3">
+                        <div class="col-12 col-md-auto mb-2 mb-md-0">
+                            <button class="btn btn-success mr-1" @click="getpdf()"><i class="fa fa-file-pdf"></i></button>
+                            <button class="btn btn-success" @click="getxls()"><i class="fa fa-file-excel"></i></button>
                         </div>
                     </div>
                 </div>
                 <div class="card-body p-0 pb-3">
-                    <table class="table mb-0 table-hover">
-                        <thead class="bg-light">
-                            <tr>
-                                <th class="border-0">
-                                    <div class="input-group">
-                                        <select class="form-control custom-select" v-model="filters.division">
-                                            <option v-for="div in divisions" :value="div . id">@{{ div.names }}</option>
-                                        </select>
-                                        <div class="input-group-append">
-                                            <button class="btn btn-secondary" @click="cleardiv()"><i
-                                                    class="material-icons">home</i></button>
-                                        </div>
+                    <div class="p-3">
+                        <div class="form-row">
+                            <div class="form-group col-12 col-md-3">
+                                <label>Sucursal</label>
+                                <div class="input-group">
+                                    <select class="form-control custom-select" v-model="filters.division">
+                                        <option v-for="div in divisions" :value="div . id">@{{ div.names }}</option>
+                                    </select>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-secondary" @click="cleardiv()"><i
+                                                class="material-icons">home</i></button>
                                     </div>
-                                </th>
-                                <th class="border-0">
-                                    <div class="input-group">
-                                        <select class="form-control custom-select" v-model="filters.rol">
-                                            <option v-for="rl in rols" :value="rl . id">@{{ rl.rol }}</option>
-                                        </select>
-                                        <div class="input-group-append">
-                                            <button class="btn btn-secondary" @click="clearrol()"><i
-                                                    class="material-icons">subject</i></button>
-                                        </div>
+                                </div>
+                            </div>
+                            <div class="form-group col-12 col-md-3">
+                                <label>Rol</label>
+                                <div class="input-group">
+                                    <select class="form-control custom-select" v-model="filters.rol">
+                                        <option v-for="rl in rols" :value="rl . id">@{{ rl.rol }}</option>
+                                    </select>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-secondary" @click="clearrol()"><i
+                                                class="material-icons">subject</i></button>
                                     </div>
+                                </div>
+                            </div>
+                            <div class="form-group col-12 col-md-3">
+                                <label>Persona</label>
+                                <div class="input-group">
+                                    <select class="form-control custom-select" v-model="filters.person">
+                                        <option v-for="per in persons" :value="per . id">@{{ per.names }}</option>
+                                    </select>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-secondary" @click="clearper()"><i
+                                                class="material-icons">supervised_user_circle</i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group col-12 col-md-3">
+                                <label>Fechas</label>
+                                <div class="input-group">
+                                    <input type="text" name="datetimes" id="datetimes" class="form-control"
+                                        value="{{ $start_date }} - {{ $end_date }}" />
+                                    <div class="input-group-append">
+                                        <button class="btn btn-secondary"><i class="fa fa-calendar-alt"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                                </th>
-                                <th class="border-0">
-                                    <div class="input-group">
-                                        <select class="form-control custom-select" v-model="filters.person">
-                                            <option v-for="per in persons" :value="per . id">@{{ per.names }}</option>
-                                        </select>
-                                        <div class="input-group-append">
-                                            <button class="btn btn-secondary" @click="clearper()"><i
-                                                    class="material-icons">supervised_user_circle</i></button>
-                                        </div>
-                                    </div>
-                                </th>
-                                <th class="border-0">
-                                    <div class="input-group">
-                                        <input type="text" name="datetimes" id="datetimes" style="width: 310px"
-                                            value="{{ $start_date }} - {{ $end_date }}" />
-
-                                        <div class="input-group-append">
-                                            <button class="btn btn-secondary"><i class="fa fa-calendar-alt "></i></button>
-                                        </div>
-                                    </div>
-
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        </tbody>
-                    </table>
-                    <table class="table mb-0 table-hover">
-                        <thead class="bg-light">
-                            <tr>
-                                <th scope="col" class="border-0">Sucursal</th>
-                                <th scope="col" class="border-0">Rol</th>
-                                <th scope="col" class="border-0">Codigo</th>
-                                <th scope="col" class="border-0">Nombre</th>
-                                <th scope="col" class="border-0">Entrada</th>
-                                <th scope="col" class="border-0">Salida</th>
-                                <th scope="col" class="border-0">Horas</th>
-                                <th scope="col" class="border-0"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template v-for="(group, token) in groupedLists">
-                                <tr v-if="tokens_finalizados.map(String).includes(String(token))" class="font-weight-bold"
-                                    style="background-color: #d6d6d6;">
-                                    <td colspan=" 6" class="text-right">
-                                        Total horas de <strong>@{{ group[0].names }}</strong>:
-                                    </td>
-                                    <td>@{{ totales_tokens[token] || '00:00' }}</td>
+                    <div class="table-responsive">
+                        <table class="table table-hover w-100 mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th scope="col" class="border-0">Sucursal</th>
+                                    <th scope="col" class="border-0">Rol</th>
+                                    <th scope="col" class="border-0">Codigo</th>
+                                    <th scope="col" class="border-0">Nombre</th>
+                                    <th scope="col" class="border-0">Entrada</th>
+                                    <th scope="col" class="border-0">Salida</th>
+                                    <th scope="col" class="border-0">Horas</th>
+                                    <th scope="col" class="border-0"></th>
                                 </tr>
-                                <tr v-for="item in group" :key="item . id">
-                                    <td>@{{ item.div }}</td>
-                                    <td>@{{ item.rol }}</td>
-                                    <td>@{{ item.token }}</td>
-                                    <td>@{{ item.names }}</td>
-                                    <td>@{{ formatFecha(item.moment_enter) }}</td>
-                                    <td>@{{ formatFecha(item.moment_exit) }}</td>
-                                    <td>@{{ item.hours }}</td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <template v-for="(group, token) in groupedLists">
+                                    <tr v-if="tokens_finalizados.map(String).includes(String(token))"
+                                        class="font-weight-bold" style="background-color: #d6d6d6;">
+                                        <td colspan="6" class="text-right">
+                                            Total horas de <strong>@{{ group[0].names }}</strong>:
+                                        </td>
+                                        <td>@{{ totales_tokens[token] || '00:00' }}</td>
+                                        <td></td>
+                                    </tr>
+                                    <tr v-for="item in group" :key="item . id">
+                                        <td>@{{ item.div }}</td>
+                                        <td>@{{ item.rol }}</td>
+                                        <td>@{{ item.token }}</td>
+                                        <td>@{{ item.names }}</td>
+                                        <td>@{{ formatFecha(item.moment_enter) }}</td>
+                                        <td>@{{ formatFecha(item.moment_exit) }}</td>
+                                        <td>@{{ item.hours }}</td>
+                                        <td></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 <div class="card-footer">
                     <div class="row">
