@@ -81,7 +81,12 @@ class ReportController extends Controller
 
             if ($entrada && $salida) {
                 $diff = $entrada->diffInSeconds($salida);
-                $horas = gmdate('H:i:s', $diff);
+                $horas_int = floor($diff / 3600);
+                $minutos_int = floor(($diff % 3600) / 60);
+                $segundos_int = $diff % 60;
+
+                $horas = sprintf('%02d:%02d:%02d', $horas_int, $minutos_int, $segundos_int);
+
             } else {
                 $horas = '0:00';
             }
@@ -107,7 +112,7 @@ class ReportController extends Controller
             'divisions' => Division::select('id', 'names')->get(),
         ];
 
-        $totalesPorToken = PersonCheck::select('persons.token', DB::raw("SEC_TO_TIME(SUM(TIME_TO_SEC(TIMEDIFF(moment_exit, moment_enter)))) as total"))
+        $totalesPorToken = PersonCheck::select('persons.token', DB::raw('SUM(TIMESTAMPDIFF(SECOND, moment_enter, moment_exit)) as total_seconds'))
             ->join('persons', 'persons_checks.person_id', '=', 'persons.id')
             ->leftJoin('persons_divisions', 'persons_divisions.person_id', 'persons.id')
             ->leftJoin('divisions', 'persons_divisions.division_id', 'divisions.id')
@@ -122,9 +127,19 @@ class ReportController extends Controller
         if ($rol > 0)
             $totalesPorToken->where('rols.id', $rol);
 
-        $totalesPorToken = $totalesPorToken->groupBy('persons.token')->pluck('total', 'persons.token');
+        $totalesPorToken = $totalesPorToken->groupBy('persons.token')->pluck('total_seconds', 'persons.token');
+        $totalesPorTokenRaw = $totalesPorToken->toArray();
+        $totalesPorTokenFormateados = [];
 
-        $result['totales_tokens'] = $totalesPorToken;
+        foreach ($totalesPorTokenRaw as $token => $segundos) {
+            $horas = floor($segundos / 3600);
+            $minutos = floor(($segundos % 3600) / 60);
+            $seg = $segundos % 60;
+            $formateado = sprintf('%02d:%02d:%02d', $horas, $minutos, $seg);
+            $totalesPorTokenFormateados[$token] = $formateado;
+        }
+
+        $result['totales_tokens'] = $totalesPorTokenFormateados;
 
         $idsPorToken = PersonCheck::select('persons.token', DB::raw('MAX(persons_checks.id) as max_id'))
             ->join('persons', 'persons_checks.person_id', '=', 'persons.id')
@@ -154,11 +169,8 @@ class ReportController extends Controller
 
         $tokensFinalizados = [];
 
-        foreach ($idsEnPagina as $token => $ids) {
-            if (in_array($idsPorToken[$token] ?? 0, $ids)) {
-                $tokensFinalizados[] = $token;
-            }
-        }
+
+        $tokensFinalizados = array_keys($idsPorToken);
 
         $result['tokens_finalizados'] = $tokensFinalizados;
 
@@ -213,7 +225,12 @@ class ReportController extends Controller
                 $diff = $entrada->diffInSeconds($salida);
             }
 
-            $horas = gmdate('H:i:s', $diff);
+            $horas_int = floor($diff / 3600);
+            $minutos_int = floor(($diff % 3600) / 60);
+            $segundos_int = $diff % 60;
+
+            $horas = sprintf('%02d:%02d:%02d', $horas_int, $minutos_int, $segundos_int);
+
 
 
             $list[] = [
@@ -241,19 +258,20 @@ class ReportController extends Controller
             return response()->json('No existen datos!', 500);
         }
 
-        // Agrupar todos los registros por token
         $agrupados = collect($list)->groupBy('token');
 
-        // Calcular total real de minutos por token
         $resumen = [];
 
         foreach ($agrupados as $token => $registros) {
             $totalSec = $registros->sum('seconds');
-            $horas = gmdate('H:i:s', $totalSec);
+            $horas_int = floor($totalSec / 3600);
+            $minutos_int = floor(($totalSec % 3600) / 60);
+            $segundos_int = $totalSec % 60;
+            $horas = sprintf('%02d:%02d:%02d', $horas_int, $minutos_int, $segundos_int);
+
             $resumen[$token] = $horas;
         }
 
-        // Armar los datos para la vista
         $data = [
             'filters' => $filters,
             'company' => Company::first(),
@@ -323,9 +341,14 @@ class ReportController extends Controller
 
             if ($entrada && $salida) {
                 $diff = $entrada->diffInSeconds($salida);
-                $horas = gmdate('H:i:s', $diff);
+                $horas_int = floor($diff / 3600);
+                $minutos_int = floor(($diff % 3600) / 60);
+                $segundos_int = $diff % 60;
+
+                $horas = sprintf('%02d:%02d:%02d', $horas_int, $minutos_int, $segundos_int);
+
             } else {
-                $horas = '0:00';
+                $horas = '00:00:00';
             }
 
             $list[] = [

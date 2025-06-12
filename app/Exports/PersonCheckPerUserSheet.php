@@ -29,8 +29,11 @@ class PersonCheckPerUserSheet implements FromView, WithTitle
             }
         }
 
-        $total_horas = gmdate('H:i:s', $totalMin);
+        $horas_int = floor($totalMin / 3600);
+        $minutos_int = floor(($totalMin % 3600) / 60);
+        $segundos_int = $totalMin % 60;
 
+        $total_horas = sprintf('%02d:%02d:%02d', $horas_int, $minutos_int, $segundos_int);
 
         return view('reports.xls', [
             'list' => $this->list,
