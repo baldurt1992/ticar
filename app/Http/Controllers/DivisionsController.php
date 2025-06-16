@@ -34,6 +34,8 @@ class DivisionsController extends Controller
                 ->whereNotNull('moment_enter')
                 ->where('motive_id', '>', 0)
                 ->whereNull('moment_exit')
+                ->whereDate('moment_enter', Carbon::today())
+                ->orderByDesc('id')
                 ->first();
             $pendingCheckMotive = $registroHoyMotivo->motive_id ?? 0;
         }

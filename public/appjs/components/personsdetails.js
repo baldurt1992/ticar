@@ -3,7 +3,7 @@ Vue.component('persons-d', {
     template:
         `<div  class="row">
         <div class="col-lg-12">
-            <div class="card card-small mb-4">
+            <div class="card card-small mb-4 ">
                 <div class="card-header border-bottom">
                     <div class="row">
                         <div class="col-lg-8 col-md-8 col-sm-6 col-xs-12 m-b-5">
@@ -42,7 +42,7 @@ Vue.component('persons-d', {
             </div>
         </div>
     </div>`,
-    data () {
+    data() {
         return {
             delobj: '',
             erros: {},
@@ -68,7 +68,7 @@ Vue.component('persons-d', {
                 created_at: '',
                 status_id: false,
             },
-            listfield: [{name: 'Nombre', type: 'text', field: 'persons.name'}, {name: 'Dirección', type: 'text',  field: 'persons.address'}],
+            listfield: [{ name: 'Nombre', type: 'text', field: 'persons.name' }, { name: 'Dirección', type: 'text', field: 'persons.address' }],
             fieldtype: 'text',
             filters: {
                 descrip: 'Nombre',
@@ -86,7 +86,7 @@ Vue.component('persons-d', {
             totalpage: 0,
             rols: [],
             divisions: [],
-            datas:[]
+            datas: []
         }
     },
     watch: {
@@ -94,14 +94,14 @@ Vue.component('persons-d', {
             this.getlist()
         }
     },
-    mounted () {
+    mounted() {
 
         this.getlist();
 
     },
     methods: {
         valid: validd,
-        setfield (f){
+        setfield(f) {
 
             this.filters.value = '';
 
@@ -114,7 +114,7 @@ Vue.component('persons-d', {
             this.fieldtype = f.type
 
         },
-        getlist (pFil, pOrder, pPager) {
+        getlist(pFil, pOrder, pPager) {
             if (pFil !== undefined) { this.filters = pFil }
 
             if (pOrder !== undefined) { this.orders = pOrder }
@@ -128,7 +128,7 @@ Vue.component('persons-d', {
 
                 url: urldomine + 'api/persons/data',
 
-                params: {start: this.pager.page - 1, take: this.pager.recordpage, filters: this.filters, orders: this.orders}
+                params: { start: this.pager.page - 1, take: this.pager.recordpage, filters: this.filters, orders: this.orders }
 
             }).then(response => {
 
@@ -149,13 +149,13 @@ Vue.component('persons-d', {
                 this.$toasted.show(e.response.data, toast_options);
             })
         },
-        getdata (it) {
+        getdata(it) {
 
             this.item = JSON.parse(JSON.stringify(it));
 
             this.onview('details')
         },
-        delitem () {
+        delitem() {
 
             this.spin = true;
 
@@ -193,14 +193,14 @@ Vue.component('persons-d', {
             $('#modaldelete').modal('show')
 
         },
-        close () {
+        close() {
 
             this.add();
 
             this.onview('list')
 
         },
-        onview (pro) {
+        onview(pro) {
 
             for (let property in this.views) {
 

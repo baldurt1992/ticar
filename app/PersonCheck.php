@@ -43,9 +43,9 @@ class PersonCheck extends Model
         return $value !== null ? date('d/m/Y H:i', strtotime($value)) : null;
     }
 
-    public function Motives()
+    public function motive()
     {
-        return $this->hasMany('App\Motive', 'id', 'motive_id');
-
+        return $this->belongsTo(Motive::class, 'motive_id');
     }
+
 }

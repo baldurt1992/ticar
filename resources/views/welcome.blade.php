@@ -17,19 +17,19 @@
 
 <body>
     <div id="app" v-cloak>
-        <div class="container containerA">
+        <div class="container containerA mt-3">
             <div class="flex-row justify-content-center">
                 <div class="card">
-                    <div class="card-header">
-                        <p class="fecha">@{{ diaSemana }} @{{ dia }} de @{{ mes }} del @{{ anio }} </p>
+                    <div class="card-header pb-0">
+                        <p class="fecha mb-0">@{{ diaSemana }} @{{ dia }} de @{{ mes }} del @{{ anio }} </p>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body mb-3">
                         <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                             <p class="tiempo">@{{ tiempo }} </p>
 
                             <video autoplay="true" class="form-control text-center fecha" id="camara"></video>
                         </div>
-                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 mt-1 keypad">
+                        <div class="mt-3 mb-3 keypad">
                             <button class="btn btn-info btn-lg mb-1 keypad-button" data-key="0"
                                 @click="setNCodigo(0)">0</button>
                             <button class="btn btn-info btn-lg mb-1 keypad-button" data-key="1"
@@ -66,8 +66,16 @@
                                 @click="openConfirm('entrada')">ENTRAR</button>
                             <button :disabled="user . token . length <= 0" class="btn btn-danger btn-lg"
                                 @click="openConfirm('salida')">SALIR</button>
-                            <button :disabled="user . token . length <= 0" class="btn btn-warning btn-lg"
-                                @click="showOb()">OTR</button>
+                            <button :disabled="!entradaNormalActiva" class="btn btn-warning btn-lg" @click="showOb()"
+                                :title="!entradaNormalActiva
+        ? 'Debes marcar una entrada antes de registrar OTROS'
+        : (pending_check_motive > 0
+            ? 'Ya tienes una entrada abierta con motivo ' + getMotivoNombre(pending_check_motive)
+            : '')">
+                   OTR
+                            </button>
+
+
                             <canvas id="canvas" style="display: none;"></canvas>
                         </div>
                     </div>
@@ -77,8 +85,8 @@
         </div>
         <div id="modalob" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
             aria-hidden="true">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
+            <div class="modal-dialog " role="document">
+                <div class="modal-content" style="min-height: 60vh;">
                     <div class="modal-header bg-info">
                         <h5 class="modal-title" style="color: black" id="exampleModalLabel">Sucursal</h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -100,10 +108,12 @@
                             </div>
                         </div>
                     </div>
-                    <div class="modal-footer-2">
-                        <button :disabled="user . division_id === 0" @click="check()"
-                            class="btn btn-danger btn-sm">CHEQUEAR</button>
-                        <a href="#" data-dismiss="modal" class="btn btn-default  btn-sm">Cerrar</a>
+                    <div class="modal-footer justify-content-between">
+                        <button :disabled="user . division_id === 0" @click="actionType = 'entrada'; check()"
+                            class="btn btn-success btn-lg w-50">
+                            ENTRAR
+                        </button>
+                        <a href="#" data-dismiss="modal" class="btn btn-secondary btn-lg w-50">Cancelar</a>
                     </div>
                 </div>
             </div>
@@ -173,7 +183,29 @@
             </div>
         </div>
 
+        <div id="modal-otros-activo" class="modal fade" tabindex="-1" role="dialog"
+            aria-labelledby="modalOtrosActivoLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning">
+                        <h5 class="modal-title text-dark" id="modalOtrosActivoLabel">Motivo OTROS activo</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body text-dark">
+                        <p id="mensaje-otros-activo"></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary btn-sm" @click="marcarRegreso">Marcar
+                            regreso</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+
 
     <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>

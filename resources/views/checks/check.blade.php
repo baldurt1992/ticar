@@ -70,13 +70,18 @@
                                 <td>@{{ formatFecha(entity.moment_enter) }}</td>
                                 <td>@{{ formatFecha(entity.moment_exit) }}</td>
                                 <td>@{{ entity.division }}</td>
-                                <td>@{{ entity.motive }}</td>
+                                <td>@{{ getMotiveName(entity.motive_id) }}</td>
                                 <td>@{{ entity.note }}</td>
                                 <td>
                                     <button class="btn btn-danger btn-sm" @click="showdelete(entity)"><i
                                             class="fa fa-eraser"></i></button>
                                 </td>
                             </tr>
+                            <tr class="font-weight-bold bg-light">
+                                <td colspan="7" class="text-right">Total horas acumuladas: @{{ total_hours }}</td>
+                                <td></td>
+                            </tr>
+
                         </tbody>
                     </table>
                 </div>
