@@ -43,53 +43,39 @@ class ReportController extends Controller
         $division = $filters['division'];
         $rol = $filters['rol'];
 
-        $datos = Person::leftjoin('persons_divisions', 'persons_divisions.person_id', 'persons.id')
-            ->leftjoin('divisions', 'persons_divisions.division_id', 'divisions.id')
-            ->leftjoin('persons_rols', 'persons_rols.person_id', 'persons.id')
-            ->leftjoin('rols', 'persons_rols.rol_id', 'rols.id')
-            ->leftjoin('persons_checks', 'persons_checks.person_id', 'persons.id');
+        $datos = PersonCheck::join('persons', 'persons_checks.person_id', '=', 'persons.id')
+            ->leftJoin('divisions', 'persons_checks.division_id', '=', 'divisions.id')
+            ->leftJoin('persons_rols', 'persons_rols.person_id', '=', 'persons.id')
+            ->leftJoin('rols', 'persons_rols.rol_id', '=', 'rols.id')
+            ->whereBetween('persons_checks.moment', [$dstar, $dend]);
 
         if ($person_id > 0)
             $datos->where('persons.id', $person_id);
         if ($division > 0)
-            $datos->where('divisions.id', $division);
+            $datos->where('persons_checks.division_id', $division);
         if ($rol > 0)
             $datos->where('rols.id', $rol);
 
-        $datos->whereBetween('moment', [$dstar, $dend]);
-        $datos->orderBy('persons.token')
-            ->orderBy('persons_checks.moment_enter', 'desc');
-
-        $total = (clone $datos)->select('persons_checks.id')->count();
+        $total = (clone $datos)->count();
 
         $data = $datos->select(
             'persons_checks.id as check_id',
             'persons.names',
             'persons.token',
-            'persons.id',
             'divisions.names as div',
             'rols.rol',
             'persons_checks.moment_enter',
             'persons_checks.moment_exit'
-        )->skip($skip)->take($request['take'])->get();
+        )->orderBy('persons.token')
+            ->orderBy('persons_checks.id', 'desc')
+            ->skip($skip)->take($request['take'])->get();
 
         $list = [];
 
         foreach ($data as $registro) {
             $entrada = $registro->moment_enter ? Carbon::parse($registro->moment_enter) : null;
             $salida = $registro->moment_exit ? Carbon::parse($registro->moment_exit) : null;
-
-            if ($entrada && $salida) {
-                $diff = $entrada->diffInSeconds($salida);
-                $horas_int = floor($diff / 3600);
-                $minutos_int = floor(($diff % 3600) / 60);
-                $segundos_int = $diff % 60;
-
-                $horas = sprintf('%02d:%02d:%02d', $horas_int, $minutos_int, $segundos_int);
-
-            } else {
-                $horas = '0:00';
-            }
+            $horas = ($entrada && $salida) ? $entrada->diff($salida)->format('%H:%I:%S') : '0:00';
 
             $list[] = [
                 'id' => $registro->check_id,
@@ -97,8 +83,8 @@ class ReportController extends Controller
                 'token' => $registro->token,
                 'div' => $registro->div,
                 'rol' => $registro->rol,
-                'moment_enter' => $registro->moment_enter ? Carbon::parse($registro->moment_enter)->timezone('UTC')->toIso8601String() : null,
-                'moment_exit' => $registro->moment_exit ? Carbon::parse($registro->moment_exit)->timezone('UTC')->toIso8601String() : null,
+                'moment_enter' => $registro->moment_enter ? Carbon::parse($registro->moment_enter)->toIso8601String() : null,
+                'moment_exit' => $registro->moment_exit ? Carbon::parse($registro->moment_exit)->toIso8601String() : null,
                 'hours' => $horas
             ];
         }
@@ -112,70 +98,52 @@ class ReportController extends Controller
             'divisions' => Division::select('id', 'names')->get(),
         ];
 
-        $totalesPorToken = PersonCheck::select('persons.token', DB::raw('SUM(TIMESTAMPDIFF(SECOND, moment_enter, moment_exit)) as total_seconds'))
-            ->join('persons', 'persons_checks.person_id', '=', 'persons.id')
-            ->leftJoin('persons_divisions', 'persons_divisions.person_id', 'persons.id')
-            ->leftJoin('divisions', 'persons_divisions.division_id', 'divisions.id')
-            ->leftJoin('persons_rols', 'persons_rols.person_id', 'persons.id')
-            ->leftJoin('rols', 'persons_rols.rol_id', 'rols.id')
+        // Totales
+        $totalesPorToken = PersonCheck::join('persons', 'persons_checks.person_id', '=', 'persons.id')
+            ->leftJoin('divisions', 'persons_checks.division_id', '=', 'divisions.id')
+            ->leftJoin('persons_rols', 'persons_rols.person_id', '=', 'persons.id')
+            ->leftJoin('rols', 'persons_rols.rol_id', '=', 'rols.id')
             ->whereBetween('persons_checks.moment', [$dstar, $dend]);
 
         if ($person_id > 0)
             $totalesPorToken->where('persons.id', $person_id);
         if ($division > 0)
-            $totalesPorToken->where('divisions.id', $division);
+            $totalesPorToken->where('persons_checks.division_id', $division);
         if ($rol > 0)
             $totalesPorToken->where('rols.id', $rol);
 
-        $totalesPorToken = $totalesPorToken->groupBy('persons.token')->pluck('total_seconds', 'persons.token');
-        $totalesPorTokenRaw = $totalesPorToken->toArray();
-        $totalesPorTokenFormateados = [];
+        $totalesPorToken = $totalesPorToken
+            ->select('persons.token', DB::raw('SUM(TIMESTAMPDIFF(SECOND, moment_enter, moment_exit)) as total_seconds'))
+            ->groupBy('persons.token')
+            ->pluck('total_seconds', 'persons.token')
+            ->toArray();
 
-        foreach ($totalesPorTokenRaw as $token => $segundos) {
-            $horas = floor($segundos / 3600);
-            $minutos = floor(($segundos % 3600) / 60);
-            $seg = $segundos % 60;
-            $formateado = sprintf('%02d:%02d:%02d', $horas, $minutos, $seg);
-            $totalesPorTokenFormateados[$token] = $formateado;
-        }
+        $result['totales_tokens'] = collect($totalesPorToken)->map(function ($segundos) {
+            $h = floor($segundos / 3600);
+            $m = floor(($segundos % 3600) / 60);
+            $s = $segundos % 60;
+            return sprintf('%02d:%02d:%02d', $h, $m, $s);
+        });
 
-        $result['totales_tokens'] = $totalesPorTokenFormateados;
-
-        $idsPorToken = PersonCheck::select('persons.token', DB::raw('MAX(persons_checks.id) as max_id'))
-            ->join('persons', 'persons_checks.person_id', '=', 'persons.id')
-            ->leftJoin('persons_divisions', 'persons_divisions.person_id', 'persons.id')
-            ->leftJoin('divisions', 'persons_divisions.division_id', 'divisions.id')
-            ->leftJoin('persons_rols', 'persons_rols.person_id', 'persons.id')
-            ->leftJoin('rols', 'persons_rols.rol_id', 'rols.id')
+        // Tokens finalizados
+        $idsPorToken = PersonCheck::join('persons', 'persons_checks.person_id', '=', 'persons.id')
             ->whereBetween('persons_checks.moment', [$dstar, $dend]);
 
         if ($person_id > 0)
             $idsPorToken->where('persons.id', $person_id);
         if ($division > 0)
-            $idsPorToken->where('divisions.id', $division);
+            $idsPorToken->where('persons_checks.division_id', $division);
         if ($rol > 0)
             $idsPorToken->where('rols.id', $rol);
 
-        $idsPorToken = $idsPorToken
+        $result['tokens_finalizados'] = $idsPorToken
+            ->select('persons.token', DB::raw('MAX(persons_checks.id) as max_id'))
             ->groupBy('persons.token')
             ->pluck('max_id', 'persons.token')
+            ->keys()
             ->toArray();
 
-        $idsEnPagina = [];
-
-        foreach ($list as $registro) {
-            $idsEnPagina[$registro['token']][] = $registro['id'];
-        }
-
-        $tokensFinalizados = [];
-
-
-        $tokensFinalizados = array_keys($idsPorToken);
-
-        $result['tokens_finalizados'] = $tokensFinalizados;
-
         return response()->json($result, 200);
-
     }
 
     private function getRawList($filters): array
@@ -186,32 +154,29 @@ class ReportController extends Controller
         $division = $filters['division'] ?? 0;
         $rol = $filters['rol'] ?? 0;
 
-        $datos = Person::leftJoin('persons_divisions', 'persons_divisions.person_id', 'persons.id')
-            ->leftJoin('divisions', 'persons_divisions.division_id', 'divisions.id')
-            ->leftJoin('persons_rols', 'persons_rols.person_id', 'persons.id')
-            ->leftJoin('rols', 'persons_rols.rol_id', 'rols.id')
-            ->leftJoin('persons_checks', 'persons_checks.person_id', 'persons.id');
+        $datos = PersonCheck::join('persons', 'persons_checks.person_id', '=', 'persons.id')
+            ->leftJoin('divisions', 'persons_checks.division_id', '=', 'divisions.id')
+            ->leftJoin('persons_rols', 'persons_rols.person_id', '=', 'persons.id')
+            ->leftJoin('rols', 'persons_rols.rol_id', '=', 'rols.id')
+            ->whereBetween('persons_checks.moment', [$dstar, $dend]);
 
         if ($person_id > 0)
             $datos->where('persons.id', $person_id);
         if ($division > 0)
-            $datos->where('divisions.id', $division);
+            $datos->where('persons_checks.division_id', $division);
         if ($rol > 0)
             $datos->where('rols.id', $rol);
-
-        $datos->whereBetween('moment', [$dstar, $dend]);
-        $datos->orderBy('persons.token')
-            ->orderBy('persons_checks.moment_enter', 'desc');
 
         $data = $datos->select(
             'persons.names',
             'persons.token',
-            'persons.id',
             'divisions.names as div',
             'rols.rol',
             'persons_checks.moment_enter',
             'persons_checks.moment_exit'
-        )->get();
+        )->orderBy('persons.token')
+            ->orderBy('persons_checks.id', 'desc')
+            ->get();
 
         $list = [];
 
@@ -219,19 +184,7 @@ class ReportController extends Controller
             $entrada = $registro->moment_enter ? Carbon::parse($registro->moment_enter) : null;
             $salida = $registro->moment_exit ? Carbon::parse($registro->moment_exit) : null;
 
-            $diff = 0;
-
-            if ($entrada && $salida && $salida->gte($entrada)) {
-                $diff = $entrada->diffInSeconds($salida);
-            }
-
-            $horas_int = floor($diff / 3600);
-            $minutos_int = floor(($diff % 3600) / 60);
-            $segundos_int = $diff % 60;
-
-            $horas = sprintf('%02d:%02d:%02d', $horas_int, $minutos_int, $segundos_int);
-
-
+            $diff = ($entrada && $salida && $salida->gte($entrada)) ? $entrada->diffInSeconds($salida) : 0;
 
             $list[] = [
                 'names' => $registro->names,
@@ -240,14 +193,13 @@ class ReportController extends Controller
                 'rol' => $registro->rol,
                 'moment_enter' => $registro->moment_enter,
                 'moment_exit' => $registro->moment_exit,
-                'hours' => $horas,
+                'hours' => sprintf('%02d:%02d:%02d', floor($diff / 3600), floor(($diff % 3600) / 60), $diff % 60),
                 'seconds' => $diff,
             ];
         }
 
         return $list;
     }
-
 
     public function pdf(Request $request)
     {
@@ -306,32 +258,29 @@ class ReportController extends Controller
         $division = $filters['division'] ?? 0;
         $rol = $filters['rol'] ?? 0;
 
-        $datos = Person::leftjoin('persons_divisions', 'persons_divisions.person_id', 'persons.id')
-            ->leftjoin('divisions', 'persons_divisions.division_id', 'divisions.id')
-            ->leftjoin('persons_rols', 'persons_rols.person_id', 'persons.id')
-            ->leftjoin('rols', 'persons_rols.rol_id', 'rols.id')
-            ->leftjoin('persons_checks', 'persons_checks.person_id', 'persons.id');
+        $datos = PersonCheck::join('persons', 'persons_checks.person_id', '=', 'persons.id')
+            ->leftJoin('divisions', 'persons_checks.division_id', '=', 'divisions.id')
+            ->leftJoin('persons_rols', 'persons_rols.person_id', '=', 'persons.id')
+            ->leftJoin('rols', 'persons_rols.rol_id', '=', 'rols.id')
+            ->whereBetween('persons_checks.moment', [$dstar, $dend]);
 
         if ($person_id > 0)
             $datos->where('persons.id', $person_id);
         if ($division > 0)
-            $datos->where('divisions.id', $division);
+            $datos->where('persons_checks.division_id', $division);
         if ($rol > 0)
             $datos->where('rols.id', $rol);
-
-        $datos->whereBetween('moment', [$dstar, $dend]);
-        $datos->orderBy('persons.token')
-            ->orderBy('persons_checks.moment_enter', 'desc');
 
         $data = $datos->select(
             'persons.names',
             'persons.token',
-            'persons.id',
             'divisions.names as div',
             'rols.rol',
             'persons_checks.moment_enter',
             'persons_checks.moment_exit'
-        )->get();
+        )->orderBy('persons.token')
+            ->orderBy('persons_checks.id', 'desc')
+            ->get();
 
         $list = [];
 
@@ -341,30 +290,24 @@ class ReportController extends Controller
 
             if ($entrada && $salida) {
                 $diff = $entrada->diffInSeconds($salida);
-                $horas_int = floor($diff / 3600);
-                $minutos_int = floor(($diff % 3600) / 60);
-                $segundos_int = $diff % 60;
-
-                $horas = sprintf('%02d:%02d:%02d', $horas_int, $minutos_int, $segundos_int);
-
+                $horas = sprintf('%02d:%02d:%02d', floor($diff / 3600), floor(($diff % 3600) / 60), $diff % 60);
             } else {
                 $horas = '00:00:00';
             }
 
             $list[] = [
+                'id' => $registro->check_id,
                 'names' => $registro->names,
                 'token' => $registro->token,
                 'div' => $registro->div,
                 'rol' => $registro->rol,
-                'moment_enter' => $registro->moment_enter,
-                'moment_exit' => $registro->moment_exit,
+                'moment_enter' => $registro->moment_enter ? Carbon::parse($registro->moment_enter)->toIso8601String() : null,
+                'moment_exit' => $registro->moment_exit ? Carbon::parse($registro->moment_exit)->toIso8601String() : null,
                 'hours' => $horas
             ];
         }
 
         return $list;
     }
-
-
 
 }

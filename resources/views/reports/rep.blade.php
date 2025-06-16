@@ -94,7 +94,7 @@
                                         <td>@{{ totales_tokens[token] || '00:00' }}</td>
                                         <td></td>
                                     </tr>
-                                    <tr v-for="item in group" :key="item . id">
+                                    <tr v-for="(item, i) in group" :key="token + '-' + i">
                                         <td>@{{ item.div }}</td>
                                         <td>@{{ item.rol }}</td>
                                         <td>@{{ item.token }}</td>
@@ -206,17 +206,19 @@
                                         <div class="dropdown-menu" style="width: 100%; max-height: 200px; overflow-y: auto;"
                                             v-if="filteredUsers.length">
                                             <button class="dropdown-item d-flex justify-content-between align-items-center"
-                                                v-for="user in filteredUsers" :key="user . id"
+                                                v-for="user in filteredUsers" :key="user.id"
                                                 @click.prevent="toggleUser(user)">
                                                 <span>@{{ user.names }} - @{{ user.email }}</span>
-                                                <i class="fa" :class="isSelected(user) ? 'fa-check-square text-success' : 'fa-square-o text-muted'"></i>
+                                                <i class="fa"
+                                                    :class="isSelected(user) ? 'fa-check-square text-success' : 'fa-square-o text-muted'"></i>
                                             </button>
                                         </div>
                                     </div>
-
+                                    <label class="mt-3 font-weight-bold text-dark">Correos adicionales</label>
+                                    <input type="text" class="form-control" v-model="emailInput"
+                                        placeholder="correo@dominio.com, otro@dominio.com">
                                     <div class="mt-2">
-                                        <span v-for="user in selectedUsers" :key="user . id"
-                                            class="badge badge-primary mr-1">
+                                        <span v-for="user in selectedUsers" :key="user.id" class="badge badge-primary mr-1">
                                             @{{ user.names }}
                                             <i class="fa fa-times ml-1" @click="removeUser(user)"
                                                 style="cursor: pointer;"></i>

@@ -18,6 +18,7 @@ new Vue({
     el: '#app',
     data() {
         return {
+            divisionEntradaAbierta: 0,
             entradaNormalActiva: false,
             entradaOtrosActiva: false,
             entradaOtrosMotivo: '',
@@ -69,6 +70,25 @@ new Vue({
         this.validarEntradaNormal();
     },
     methods: {
+        handleEntrada() {
+            if (!this.user.token) return;
+
+            axios.get(urldomine + 'api/divisions/data/' + this.user.token)
+                .then(res => {
+                    this.divisions = res.data.division;
+
+                    if (this.divisions.length > 1) {
+                        $('#modal-entrada').modal('show');
+                    } else {
+                        this.user.division_id = this.divisions[0].id;
+                        this.actionType = 'entrada';
+                        this.check();
+                    }
+                })
+                .catch(() => {
+                    this.$toasted.global.error({ message: 'No se pudieron cargar las divisiones.' });
+                });
+        },
         actualizarPendingMotive() {
             if (!this.user.token) return;
 
@@ -92,6 +112,9 @@ new Vue({
             axios.get(urldomine + 'api/divisions/data/' + this.user.token)
                 .then(res => {
                     this.entradaNormalActiva = res.data.has_open_check === true;
+                    if (res.data.division && res.data.division.length > 0) {
+                        this.divisionEntradaAbierta = res.data.division[0].id;
+                    }
                 })
                 .catch(() => {
                     this.entradaNormalActiva = false;
@@ -190,6 +213,7 @@ new Vue({
             axios.get(urldomine + 'api/divisions/data/' + this.user.token)
                 .then(res => {
                     this.pending_check_motive = res.data.pending_check_motive || 0;
+                    this.divisions = res.data.division;
 
                     if (this.pending_check_motive > 0) {
                         const motivo = this.getMotivoNombre(this.pending_check_motive);
@@ -204,10 +228,11 @@ new Vue({
                         return;
                     }
 
-                    if (res.data.division.length > 1) {
-                        this.divisions = res.data.division;
-                    } else {
-                        this.user.division_id = res.data.division[0].id;
+                    if (res.data.has_open_check) {
+                        if (res.data.division.length > 0) {
+                            this.divisionEntradaAbierta = res.data.division[0].id;
+                            this.user.division_id = this.divisionEntradaAbierta;
+                        }
                     }
 
                     $('#modalob').modal('show');
@@ -289,6 +314,10 @@ new Vue({
                     this.$toasted.global.error({ message: msg, className: 'toast-center-screen bg-danger text-white' });
                 });
         },
+        getDivisionNombre(id) {
+            const d = this.divisions.find(div => div.id === id);
+            return d ? d.names : 'desconocida';
+        },
 
         check(cerrarModalOtros = false) {
             this.video.pause();
@@ -306,24 +335,35 @@ new Vue({
             })
                 .then(res => {
                     let mensaje = res.data;
-                    if (
-                        this.user.motive_id > 0 &&
-                        this.actionType === 'entrada' &&
-                        res.data.startsWith('Entrada registrada con éxito')
-                    ) {
+                    let divisionNombre = this.getDivisionNombre(this.user.division_id);
+                    if (this.actionType === 'entrada') {
+                        mensaje += `, Sucursal: ${divisionNombre}`;
+                    } else if (this.actionType === 'salida') {
+                        mensaje += `, Sucursal: ${divisionNombre}`;
+                    }
+                    if (this.user.motive_id > 0) {
                         const motivo = this.getMotivoNombre(this.user.motive_id);
-                        mensaje = `Entrada registrada con motivo "${motivo}". Entrada generada.`;
-                    } else if (
-                        this.user.motive_id > 0 &&
-                        this.actionType === 'salida' &&
-                        res.data.startsWith('Salida registrada con éxito')
-                    ) {
-                        const motivo = this.getMotivoNombre(this.user.motive_id);
-                        mensaje = `Salida registrada con motivo "${motivo}".`;
+                        if (
+                            res.data.includes('Entrada registrada con éxito') ||
+                            res.data.includes('Entrada generada') ||
+                            res.data.includes('Entrada registrada con motivo')
+                        ) {
+                            mensaje = `Entrada registrada con motivo "${motivo}". Sucursal: ${divisionNombre}`;
+                        } else if (
+                            res.data.includes('Salida registrada con éxito') ||
+                            res.data.includes('Salida OTROS') ||
+                            res.data.includes('cerrada correctamente') ||
+                            res.data.includes('cerrada automáticamente') ||
+                            res.data.includes('Se cerraron ambas entradas')
+                        ) {
+                            mensaje = `Salida registrada con motivo "${motivo}". Sucursal: ${divisionNombre}`;
+                        }
                     }
 
-                    if (this.user.motive_id > 0 && this.actionType === 'entrada') {
+                    if (this.actionType === 'entrada') {
+                        $('#modal-entrada').modal('hide');
                         $('#modalob').modal('hide');
+                        $('#confirmModal').modal('hide');
                     }
 
                     this.$toasted.global.success({

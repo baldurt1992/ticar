@@ -176,12 +176,19 @@ new Vue({
                 this.allUsers = res.data.list;
             });
         },
+
         toggleUser(user) {
-            const idx = this.selectedUsers.findIndex(u => u.id === user.id);
-            if (idx >= 0) {
-                this.selectedUsers.splice(idx, 1);
+            if (user.id === -1) {
+                this.selectedUsers = this.persons.filter(p =>
+                    !this.selectedUsers.some(s => s.id === p.id)
+                );
             } else {
-                this.selectedUsers.push(user);
+                const idx = this.selectedUsers.findIndex(u => u.id === user.id);
+                if (idx >= 0) {
+                    this.selectedUsers.splice(idx, 1);
+                } else {
+                    this.selectedUsers.push(user);
+                }
             }
         },
         removeUser(user) {
@@ -195,6 +202,17 @@ new Vue({
             this.custom_report.format = this.formatSelection.length === 2 ? 'both' : this.formatSelection[0] || 'pdf';
             this.custom_report.emails = this.selectedUsers.map(u => u.email);
             this.custom_report.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const correosExtras = this.emailInput
+                .split(',')
+                .map(e => e.trim())
+                .filter(e => e.includes('@'));
+
+            this.custom_report.emails = [
+                ...this.selectedUsers
+                    .filter(u => u.email !== 'todos@system.local')
+                    .map(u => u.email),
+                ...correosExtras
+            ];
 
             axios.post(`${urldomine}custom-reports`, this.custom_report)
                 .then(response => {
@@ -367,10 +385,16 @@ new Vue({
     computed: {
         filteredUsers() {
             const q = (this.userSearch || '').toLowerCase();
-            return this.persons.filter(u =>
+            let base = this.persons.filter(u =>
                 (u.names || '').toLowerCase().includes(q) ||
                 (u.email || '').toLowerCase().includes(q)
             );
+
+            if (q === '' || 'todos'.includes(q)) {
+                base.unshift({ id: -1, names: 'TODOS', email: 'todos@system.local' });
+            }
+
+            return base;
         },
         groupedLists() {
             const grouped = {};
