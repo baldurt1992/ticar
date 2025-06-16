@@ -1,11 +1,28 @@
-Vue.use(Toasted, toast_options);
+Vue.use(Toasted, {
+    duration: 5000,
+    position: 'top-center',
+    theme: 'toasted'
+});
+
+Vue.toasted.register('success', payload => payload.message || 'Éxito', {
+    className: 'bg-success text-white',
+    duration: 5000
+});
+
+Vue.toasted.register('error', payload => payload.message || 'Error', {
+    className: 'bg-danger text-white',
+    duration: 5000
+});
 
 new Vue({
     el: '#app',
     data() {
         return {
+            entradaNormalActiva: false,
+            entradaOtrosActiva: false,
+            entradaOtrosMotivo: '',
             tiempo: 1,
-            semana: ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'],
+            semana: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
             meses: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
             diaSemana: '',
             dia: '',
@@ -24,78 +41,207 @@ new Vue({
             motives: [],
             divisions: [],
             pending_check_motive: 0,
-        }
+            actionType: '',
+        };
     },
     mounted() {
-        setInterval(() => {
-            this.reloj()
-        }, 1000);
+        setInterval(() => this.reloj(), 1000);
         this.fecha();
         this.video = document.querySelector("#camara");
         this.canvas = document.getElementById("canvas");
-        if (this.soporteUserMedia()) {
-            this._getUserMedia({ video: true }, (stream) => { this.video.srcObject = stream; }, er => {
-                this.$toasted.show(er, toast_options)
-            });
+
+        if (navigator.mediaDevices?.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    this.video.srcObject = stream;
+                })
+                .catch(() => {
+                    this.video.style.display = 'none';
+                });
         } else {
-            this.$toasted.show('Lo siento. El navegador no soporta esta característica', toast_options)
+            this.$toasted.global.error({ message: 'Tu navegador no soporta la cámara.' });
         }
 
         axios.get(urldomine + 'api/motives/motives').then(res => {
-            this.motives = res.data
+            this.motives = res.data;
         });
 
+        this.validarEntradaNormal();
     },
     methods: {
-        vals(e) {
+        actualizarPendingMotive() {
+            if (!this.user.token) return;
 
-            if (e.key === 'Enter') {
-                this.checkd()
+            axios.get(urldomine + 'api/divisions/data/' + this.user.token)
+                .then(res => {
+                    this.pending_check_motive = res.data.pending_check_motive || 0;
+                });
+        },
+
+        getMotivoNombre(id) {
+            const mot = this.motives.find(m => m.id === id);
+            return mot ? mot.motive : 'desconocido';
+        },
+
+        validarEntradaNormal() {
+            if (!this.user.token) {
+                this.entradaNormalActiva = false;
+                return;
             }
 
+            axios.get(urldomine + 'api/divisions/data/' + this.user.token)
+                .then(res => {
+                    this.entradaNormalActiva = res.data.has_open_check === true;
+                })
+                .catch(() => {
+                    this.entradaNormalActiva = false;
+                });
         },
+
+        vals(e) {
+            if (e.key === 'Enter') {
+                this.checkd();
+            }
+        },
+
+        openConfirm(tipo) {
+            this.actionType = tipo;
+            document.getElementById('confirmMessage').innerText =
+                tipo === 'entrada' ? '¿Deseas marcar la ENTRADA?' : '¿Deseas marcar la SALIDA?';
+            $('#confirmModal').modal('show');
+        },
+
+        confirmAction() {
+            $('#confirmModal').modal('hide');
+
+            if (this.actionType === 'entrada') {
+                this.user.motive_id = 0;
+                this.user.note = '';
+                this.check();
+            } else {
+                axios.get(urldomine + 'api/divisions/data/' + this.user.token)
+                    .then(res => {
+                        if (res.data.division.length > 0) {
+                            this.user.division_id = res.data.division[0].id;
+                        } else {
+                            this.$toasted.global.error({ message: 'No se encontraron divisiones asociadas al usuario.' });
+                            return;
+                        }
+
+                        this.pending_check_motive = res.data.pending_check_motive;
+
+                        if (res.data.has_open_check) {
+                            this.user.motive_id = 0;
+                            this.user.note = '';
+                            this.check();
+
+                            // 🔥 Aquí debes forzar actualización nuevamente luego de la salida
+                            setTimeout(() => {
+                                this.actualizarPendingMotive();
+                                this.validarEntradaNormal();
+                            }, 1000);
+                        } else {
+                            this.user.motive_id = 999;
+                            this.user.note = 'Entrada automática al marcar solo salida';
+                            this.check();
+
+                            // 🔥 También forzar después de marcar entrada automática
+                            setTimeout(() => {
+                                this.actualizarPendingMotive();
+                                this.validarEntradaNormal();
+                            }, 1000);
+                        }
+                    })
+                    .catch(er => {
+                        let msg = 'Error inesperado';
+                        if (typeof er.response?.data === 'string') {
+                            msg = er.response.data;
+                        } else if (er.response?.data?.message) {
+                            msg = er.response.data.message;
+                        } else if (er.response?.data?.errors) {
+                            const errores = er.response.data.errors;
+                            const primerCampo = Object.keys(errores)[0];
+                            msg = errores[primerCampo][0];
+                        }
+
+                        this.$toasted.global.error({ message: msg, className: 'toast-center-screen bg-danger text-white' });
+                    });
+            }
+        },
+
+        marcarRegreso() {
+            $('#modal-otros-activo').modal('hide'); // 👈 Esto es lo que faltaba
+
+            this.actionType = 'salida';
+            this.user.motive_id = this.pending_check_motive;
+            this.user.note = '(regreso)';
+
+            axios.get(urldomine + 'api/divisions/data/' + this.user.token)
+                .then(res => {
+                    if (res.data.division.length > 0) {
+                        this.user.division_id = res.data.division[0].id;
+
+                        this.check();
+                    } else {
+                        this.$toasted.global.error({ message: 'No se encontraron divisiones para marcar regreso.' });
+                    }
+                });
+        },
+
         showOb() {
-            axios.get(urldomine + 'api/divisions/data/' + this.user.token).then(res => {
+            axios.get(urldomine + 'api/divisions/data/' + this.user.token)
+                .then(res => {
+                    this.pending_check_motive = res.data.pending_check_motive || 0;
+                    console.log('Motivo pendiente:', this.pending_check_motive);
 
-                if (res.data.division.length > 1) {
-                    this.divisions = res.data.division;
-                    this.pending_check_motive = res.data.pending_check_motive
+                    if (this.pending_check_motive > 0) {
+                        const motivo = this.getMotivoNombre(this.pending_check_motive);
+                        document.getElementById('mensaje-otros-activo').innerText =
+                            `Ya tienes una entrada registrada con motivo "${motivo}", ¿quieres marcar el regreso?`;
+                        $('#modal-otros-activo').modal('show');
+                        return;
+                    }
+
+                    if (res.data.division.length > 1) {
+                        this.divisions = res.data.division;
+                    } else {
+                        this.user.division_id = res.data.division[0].id;
+                    }
 
                     $('#modalob').modal('show');
-                } else {
-                    this.user.division_id = res.data.division[0].id;
-                    this.pending_check_motive = res.data.pending_check_motive
-                    $('#modalob').modal('show');
-                }
-                if (this.pending_check_motive > 0) {
-                    this.user.motive_id = this.pending_check_motive
-                    $('#block_motives').attr('disabled', true);
-                    $('#block_motives').val(this.pending_check_motive);
-                    $('#block_motives option[value="' + this.pending_check_motive + '"]').prop('selected', true);
-                } else {
-                    $('#block_motives').attr('disabled', false);
-                    $('#block_motives').val('');
-                }
 
-            }).catch(er => {
-                this.$toasted.show(er.response.data)
-            });
+                    if (this.pending_check_motive > 0) {
+                        this.user.motive_id = this.pending_check_motive;
+                        $('#block_motives').attr('disabled', true).val(this.pending_check_motive);
+                        $('#block_motives option[value="' + this.pending_check_motive + '"]').prop('selected', true);
+                    } else {
+                        $('#block_motives').attr('disabled', false).val('');
+                    }
+                })
+                .catch(er => {
+                    let msg = 'Error inesperado';
 
+                    if (typeof er.response?.data === 'string') {
+                        msg = er.response.data;
+                    } else if (er.response?.data?.message) {
+                        msg = er.response.data.message;
+                    } else if (er.response?.data?.errors) {
+                        const errores = er.response.data.errors;
+                        const primerCampo = Object.keys(errores)[0];
+                        msg = errores[primerCampo][0];
+                    }
+
+                    this.$toasted.global.error({ message: msg, className: 'toast-center-screen bg-danger text-white' });
+                });
         },
         setNCodigo(x) {
             this.user.token += x;
         },
         deteteNBAN() {
-            this.user.token = ''
+            this.user.token = '';
         },
         deteteNCodigo() {
-            this.user.token = this.user.token.substring(0, this.user.token.length - 1)
-        },
-        soporteUserMedia() {
-            return !!(navigator.getUserMedia || navigator.mediaDevices.getUserMedia || navigator.webkitGetUserMedia || navigator.msGetUserMedia)
-        },
-        _getUserMedia() {
-            return (navigator.getUserMedia || (navigator.mozGetUserMedia || navigator.mediaDevices.getUserMedia) || navigator.webkitGetUserMedia || navigator.msGetUserMedia).apply(navigator, arguments);
+            this.user.token = this.user.token.slice(0, -1);
         },
         fecha() {
             let fecha = new Date();
@@ -108,47 +254,116 @@ new Vue({
             this.tiempo = new Date().toLocaleTimeString();
         },
         checkd() {
-            axios.get(urldomine + 'api/divisions/data/' + this.user.token).then(res => {
-                if (res.data.division.length > 1) {
-                    this.divisions = res.data.division;
-                    $('#div').modal('show');
-                    this.pending_check_motive = res.data.pending_check_motive
-                } else {
+            axios.get(urldomine + 'api/divisions/data/' + this.user.token)
+                .then(res => {
+                    this.pending_check_motive = res.data.pending_check_motive;
 
-                    this.user.division_id = res.data.division[0].id;
-                    this.pending_check_motive = res.data.pending_check_motive
-                    this.check()
-                }
+                    if (res.data.division.length > 1) {
+                        this.divisions = res.data.division;
+                        $('#div').modal('show');
+                    } else {
+                        this.user.division_id = res.data.division[0].id;
 
-            }).catch(er => {
-                this.$toasted.show(er.response.data)
-            });
+                        // 🔥 Aquí detectamos si hay motivo: se asume entrada OTROS
+                        this.actionType = (this.user.motive_id > 0 || this.pending_check_motive > 0)
+                            ? 'entrada'
+                            : 'salida';
+
+                        this.check();
+                    }
+                })
+                .catch(er => {
+                    let msg = 'Error inesperado';
+
+                    if (typeof er.response?.data === 'string') {
+                        msg = er.response.data;
+                    } else if (er.response?.data?.message) {
+                        msg = er.response.data.message;
+                    } else if (er.response?.data?.errors) {
+                        const errores = er.response.data.errors;
+                        const primerCampo = Object.keys(errores)[0];
+                        msg = errores[primerCampo][0];
+                    }
+
+                    this.$toasted.global.error({ message: msg, className: 'toast-center-screen bg-danger text-white' });
+                });
         },
-        check() {
 
+        check(cerrarModalOtros = false) {
             this.video.pause();
             let contexto = this.canvas.getContext("2d");
             this.canvas.width = this.video.videoWidth;
             this.canvas.height = this.video.videoHeight;
             contexto.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
             this.video.play();
-            this.user.screen = this.canvas.toDataURL();
-            axios({
-                url: urldomine + 'api/persons/check',
-                method: 'post',
-                data: this.user,
-            }).then(res => {
-                this.$toasted.show(res.data, toast_options);
-                this.user.token = '';
-                this.user.motive_id = 0;
-                this.user.note = '';
-                this.user.screen = 0;
-                $('#div').modal('hide');
-                $('#modalob').modal('hide');
-            }).catch(er => {
-                this.$toasted.show(er.response.data, toast_options)
-            })
 
+            this.user.screen = this.canvas.toDataURL();
+
+            axios.post(urldomine + 'api/persons/check', {
+                ...this.user,
+                accion: this.actionType
+            })
+                .then(res => {
+                    let mensaje = res.data;
+                    if (
+                        this.user.motive_id > 0 &&
+                        this.actionType === 'entrada' &&
+                        res.data.startsWith('Entrada registrada con éxito')
+                    ) {
+                        const motivo = this.getMotivoNombre(this.user.motive_id);
+                        mensaje = `Entrada registrada con motivo "${motivo}". Entrada generada.`;
+                    } else if (
+                        this.user.motive_id > 0 &&
+                        this.actionType === 'salida' &&
+                        res.data.startsWith('Salida registrada con éxito')
+                    ) {
+                        const motivo = this.getMotivoNombre(this.user.motive_id);
+                        mensaje = `Salida registrada con motivo "${motivo}".`;
+                    }
+
+                    if (this.user.motive_id > 0 && this.actionType === 'entrada') {
+                        $('#modalob').modal('hide');
+                    }
+
+                    this.$toasted.global.success({
+                        message: mensaje,
+                        className: 'toast-center-screen bg-success text-white'
+                    });
+                })
+                .catch(er => {
+                    let msg = 'Error inesperado';
+                    if (typeof er.response?.data === 'string') {
+                        msg = er.response.data;
+                    } else if (er.response?.data?.message) {
+                        msg = er.response.data.message;
+                    } else if (er.response?.data?.errors) {
+                        const errores = er.response.data.errors;
+                        const primerCampo = Object.keys(errores)[0];
+                        msg = errores[primerCampo][0];
+                    }
+
+                    this.$toasted.global.error({ message: msg, className: 'toast-center-screen bg-danger text-white' });
+                })
+                .finally(() => {
+                    this.user.token = '';
+                    this.user.motive_id = 0;
+                    this.user.note = '';
+                    this.user.division_id = 0;
+
+                    setTimeout(() => {
+                        this.actualizarPendingMotive();
+                    }, 300);
+                });
+        }
+    },
+
+    watch: {
+        'user.token'(val) {
+            if (val && val.length >= 2) {
+                this.validarEntradaNormal();
+            } else {
+                this.entradaNormalActiva = false;
+            }
         }
     }
 

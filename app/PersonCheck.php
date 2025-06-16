@@ -30,16 +30,22 @@ class PersonCheck extends Model
         'url_screen'
     ];
 
+    protected $casts = [
+        'moment' => 'datetime',
+        'moment_enter' => 'datetime',
+        'moment_exit' => 'datetime',
+    ];
+
     public $timestamps = false;
 
-   public function getMomentAttribute($value)
+    public function getMomentAttribute($value)
     {
-        return $value !== null ?  date('d/m/Y H:i', strtotime($value)) : null;
+        return $value !== null ? date('d/m/Y H:i', strtotime($value)) : null;
     }
 
-    public function Motives()
+    public function motive()
     {
-        return $this->hasMany('App\Motive', 'id', 'motive_id');
-
+        return $this->belongsTo(Motive::class, 'motive_id');
     }
+
 }

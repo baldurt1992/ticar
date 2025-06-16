@@ -16,355 +16,355 @@ use Maatwebsite\Excel\Excel;
 use App\Exports\PersonCheckXls;
 use Illuminate\Support\Facades\DB;
 use phpDocumentor\Reflection\Types\Object_;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ReportController extends Controller
 {
-    public function index() {
+    public function index()
+    {
+        $now = now();
+        $start = $now->copy()->startOfMonth()->format('Y-m-d H:i');
+        $end = $now->format('Y-m-d H:i');
 
-        return view('reports.rep') ;
-
+        return view('reports.rep', [
+            'start_date' => $start,
+            'end_date' => $end,
+        ]);
     }
 
-    public function getList(Request $request) {
-
+    public function getList(Request $request)
+    {
         $skip = $request->input('start') * $request->input('take');
-
         $filters = $request->input('filters', true);
 
         $person_id = $filters['person'];
-
         $dstar = $filters['dstar'];
-
-        $dend =  $filters['dend'];
-
+        $dend = $filters['dend'];
         $division = $filters['division'];
-
         $rol = $filters['rol'];
 
-        $datos = Person::leftjoin('persons_divisions','persons_divisions.person_id', 'persons.id')
+        $datos = Person::leftjoin('persons_divisions', 'persons_divisions.person_id', 'persons.id')
+            ->leftjoin('divisions', 'persons_divisions.division_id', 'divisions.id')
+            ->leftjoin('persons_rols', 'persons_rols.person_id', 'persons.id')
+            ->leftjoin('rols', 'persons_rols.rol_id', 'rols.id')
+            ->leftjoin('persons_checks', 'persons_checks.person_id', 'persons.id');
 
-            ->leftjoin('divisions','persons_divisions.division_id', 'divisions.id')
-
-             ->leftjoin('persons_rols','persons_rols.person_id', 'persons.id')
-
-             ->leftjoin('rols','persons_rols.rol_id', 'rols.id')
-
-             ->leftjoin('persons_checks','persons_checks.person_id', 'persons.id');
-
-        if ($person_id > 0) $datos->where('persons.id', $person_id);
-
-        if ($division > 0) $datos->where('divisions.id', $division);
+        if ($person_id > 0)
+            $datos->where('persons.id', $person_id);
+        if ($division > 0)
+            $datos->where('divisions.id', $division);
+        if ($rol > 0)
+            $datos->where('rols.id', $rol);
 
         $datos->whereBetween('moment', [$dstar, $dend]);
+        $datos->orderBy('persons.token')
+            ->orderBy('persons_checks.moment_enter', 'desc');
 
-        $datos->orderby('moment', 'asc');
+        $total = (clone $datos)->select('persons_checks.id')->count();
 
-        if ($rol > 0) $datos->where( 'rols.id', $rol);
-
-        $total = $datos->select('persons.names', 'persons.token', 'persons.id', 'divisions.names as div', 'rols.rol', DB::raw('DATE_FORMAT(persons_checks.moment, "%Y-%m-%d %H:%i") as moment'))->count();
-
-        $data =  $datos->skip($skip)->take($request['take'])->get();
-
-       // return response()->json($data, 200);
+        $data = $datos->select(
+            'persons_checks.id as check_id',
+            'persons.names',
+            'persons.token',
+            'persons.id',
+            'divisions.names as div',
+            'rols.rol',
+            'persons_checks.moment_enter',
+            'persons_checks.moment_exit'
+        )->skip($skip)->take($request['take'])->get();
 
         $list = [];
 
-        $times = [];
+        foreach ($data as $registro) {
+            $entrada = $registro->moment_enter ? Carbon::parse($registro->moment_enter) : null;
+            $salida = $registro->moment_exit ? Carbon::parse($registro->moment_exit) : null;
 
-        for ($i = 0; $i <= count($data) - 1; $i++) {
+            if ($entrada && $salida) {
+                $diff = $entrada->diffInSeconds($salida);
+                $horas_int = floor($diff / 3600);
+                $minutos_int = floor(($diff % 3600) / 60);
+                $segundos_int = $diff % 60;
 
-            $start = Carbon::parse($data[$i]['moment']);
-
-            if ($i + 1 <= count($data) - 1) {
-
-                $end = Carbon::parse($data[$i+1]['moment']);
-
-            } else {
-
-                $data[$i]['dend'] = '-';
-
-                $data[$i]['dstar'] = $data[$i]['moment'];
-
-                $data[$i]['hours'] = 0;
-
-                $list[] = $data[$i];
-
-                break;
-            }
-
-            if ( $start->day == $end->day) {
-
-                $hours = (Carbon::parse($data[$i+1]['moment'])->diffInMinutes(Carbon::parse($data[$i]['moment'])));
-
-                $times[] = $hours ;
-
-                $data[$i]['dend'] = $data[$i+1]['moment'];
-
-                $data[$i]['dstar'] = $data[$i]['moment'];
-
-                if (!is_int( $hours / 60)) {
-
-                    $aux = (string) $hours /60;
-
-                    $h = explode('.', $aux);
-
-                    $h[1] = round(((int) substr( $h[1], 0, 2) / 100) * 60);
-
-                    $h[1] = $h[1] < 10 ? '0'.$h[1] : $h[1];
-                }  else {
-
-                    $h[0] = $hours / 60;  $h[1] = 0;
-                }
-
-                $data[$i]['hours'] = $h[0] . ':' . $h[1]; // number_format($hours / 60, 2, ':', '');
-
-                $list[] = $data[$i];
-
-                if (($i + 2) <= count($data) - 1) {
-
-                    if ($end->day < Carbon::parse($data[$i+2]['moment'])->day) {
-
-                        $totalminut = collect($times)->reduce(function ($carry, $item) {
-                            return $carry + $item;
-                        });
-
-                        $aux = (string) $totalminut  /60;
-
-                        $h = explode('.', $aux);
-
-                        $h[1] = round(((int) substr( $h[1], 0, 2) / 100) * 60);
-
-                        $h[1] = $h[1] < 10 ? '0'.$h[1] : $h[1];
-
-                        $list[] = ['-', '-', '-', '-', '-', 'dend' => 'Total', 'hours' => $h[0] . ':' . $h[1]];
-
-                        $times= [];
-                    }
-
-                }
-
-                $i = $i + 1;
-
-                if (($i + 2) > count($data) - 1) { $i = count($data) - 1;}
-
+                $horas = sprintf('%02d:%02d:%02d', $horas_int, $minutos_int, $segundos_int);
 
             } else {
-
-                $data[$i]['dend'] = '-';
-
-                $data[$i]['dstar'] = $data[$i]['moment'];
-
-                $data[$i]['hours'] = '0';
-
-                $list[] = $data[$i];
-
-                $totalminut = collect($times)->reduce(function ($carry, $item) {
-                    return $carry + $item;
-                });
-
-                $hours = $totalminut * (1/60);
-
-                $list[] = ['-', '-', '-', '-', '-', 'dend' => 'Total', 'hours' => number_format($hours, 2, '.', '')];
-
-                $times= [];
+                $horas = '0:00';
             }
 
+            $list[] = [
+                'id' => $registro->check_id,
+                'names' => $registro->names,
+                'token' => $registro->token,
+                'div' => $registro->div,
+                'rol' => $registro->rol,
+                'moment_enter' => $registro->moment_enter ? Carbon::parse($registro->moment_enter)->timezone('UTC')->toIso8601String() : null,
+                'moment_exit' => $registro->moment_exit ? Carbon::parse($registro->moment_exit)->timezone('UTC')->toIso8601String() : null,
+                'hours' => $horas
+            ];
         }
 
         $result = [
-
             'total' => $total,
-
-            'list' =>  $list,
-
+            'list' => $list,
             'persons' => Person::select('id', 'names')->get(),
-
             'motives' => Motive::all(),
-
             'rols' => Rol::all(),
-
             'divisions' => Division::select('id', 'names')->get(),
         ];
 
+        $totalesPorToken = PersonCheck::select('persons.token', DB::raw('SUM(TIMESTAMPDIFF(SECOND, moment_enter, moment_exit)) as total_seconds'))
+            ->join('persons', 'persons_checks.person_id', '=', 'persons.id')
+            ->leftJoin('persons_divisions', 'persons_divisions.person_id', 'persons.id')
+            ->leftJoin('divisions', 'persons_divisions.division_id', 'divisions.id')
+            ->leftJoin('persons_rols', 'persons_rols.person_id', 'persons.id')
+            ->leftJoin('rols', 'persons_rols.rol_id', 'rols.id')
+            ->whereBetween('persons_checks.moment', [$dstar, $dend]);
+
+        if ($person_id > 0)
+            $totalesPorToken->where('persons.id', $person_id);
+        if ($division > 0)
+            $totalesPorToken->where('divisions.id', $division);
+        if ($rol > 0)
+            $totalesPorToken->where('rols.id', $rol);
+
+        $totalesPorToken = $totalesPorToken->groupBy('persons.token')->pluck('total_seconds', 'persons.token');
+        $totalesPorTokenRaw = $totalesPorToken->toArray();
+        $totalesPorTokenFormateados = [];
+
+        foreach ($totalesPorTokenRaw as $token => $segundos) {
+            $horas = floor($segundos / 3600);
+            $minutos = floor(($segundos % 3600) / 60);
+            $seg = $segundos % 60;
+            $formateado = sprintf('%02d:%02d:%02d', $horas, $minutos, $seg);
+            $totalesPorTokenFormateados[$token] = $formateado;
+        }
+
+        $result['totales_tokens'] = $totalesPorTokenFormateados;
+
+        $idsPorToken = PersonCheck::select('persons.token', DB::raw('MAX(persons_checks.id) as max_id'))
+            ->join('persons', 'persons_checks.person_id', '=', 'persons.id')
+            ->leftJoin('persons_divisions', 'persons_divisions.person_id', 'persons.id')
+            ->leftJoin('divisions', 'persons_divisions.division_id', 'divisions.id')
+            ->leftJoin('persons_rols', 'persons_rols.person_id', 'persons.id')
+            ->leftJoin('rols', 'persons_rols.rol_id', 'rols.id')
+            ->whereBetween('persons_checks.moment', [$dstar, $dend]);
+
+        if ($person_id > 0)
+            $idsPorToken->where('persons.id', $person_id);
+        if ($division > 0)
+            $idsPorToken->where('divisions.id', $division);
+        if ($rol > 0)
+            $idsPorToken->where('rols.id', $rol);
+
+        $idsPorToken = $idsPorToken
+            ->groupBy('persons.token')
+            ->pluck('max_id', 'persons.token')
+            ->toArray();
+
+        $idsEnPagina = [];
+
+        foreach ($list as $registro) {
+            $idsEnPagina[$registro['token']][] = $registro['id'];
+        }
+
+        $tokensFinalizados = [];
+
+
+        $tokensFinalizados = array_keys($idsPorToken);
+
+        $result['tokens_finalizados'] = $tokensFinalizados;
+
         return response()->json($result, 200);
+
     }
 
-    public function pdf(Request $request) {
+    private function getRawList($filters): array
+    {
+        $person_id = $filters['person'] ?? 0;
+        $dstar = $filters['dstar'] ?? now()->startOfDay();
+        $dend = $filters['dend'] ?? now()->endOfDay();
+        $division = $filters['division'] ?? 0;
+        $rol = $filters['rol'] ?? 0;
 
-        $pdf = App::make('snappy.pdf.wrapper');
+        $datos = Person::leftJoin('persons_divisions', 'persons_divisions.person_id', 'persons.id')
+            ->leftJoin('divisions', 'persons_divisions.division_id', 'divisions.id')
+            ->leftJoin('persons_rols', 'persons_rols.person_id', 'persons.id')
+            ->leftJoin('rols', 'persons_rols.rol_id', 'rols.id')
+            ->leftJoin('persons_checks', 'persons_checks.person_id', 'persons.id');
 
-       // $skip = $request->input('start') * $request->input('take');
-
-        $filters = $request->input('filters');
-
-        $person_id = $filters['person'];
-
-        $dstar = $filters['dstar'];
-
-        $dend =  $filters['dend'];
-
-        $division = $filters['division'];
-
-        $rol = $filters['rol'];
-
-        $datos = Person::leftjoin('persons_divisions','persons_divisions.person_id', 'persons.id')
-
-            ->leftjoin('divisions','persons_divisions.division_id', 'divisions.id')
-
-            ->leftjoin('persons_rols','persons_rols.person_id', 'persons.id')
-
-            ->leftjoin('rols','persons_rols.rol_id', 'rols.id')
-
-            ->leftjoin('persons_checks','persons_checks.person_id', 'persons.id');
-
-        if ($person_id > 0) $datos->where('persons.id', $person_id);
-
-        if ($division > 0) $datos->where('divisions.id', $division);
+        if ($person_id > 0)
+            $datos->where('persons.id', $person_id);
+        if ($division > 0)
+            $datos->where('divisions.id', $division);
+        if ($rol > 0)
+            $datos->where('rols.id', $rol);
 
         $datos->whereBetween('moment', [$dstar, $dend]);
+        $datos->orderBy('persons.token')
+            ->orderBy('persons_checks.moment_enter', 'desc');
 
-        $datos->orderby('moment', 'asc');
-
-        if ($rol > 0) $datos->where( 'rols.id', $rol);
-
-        $total = $datos->select('persons.names', 'persons.token', 'persons.id', 'divisions.names as div', 'rols.rol', DB::raw('DATE_FORMAT(persons_checks.moment, "%Y-%m-%d %H:%i") as moment'))->count();
-
-        $data =  $datos->get();
+        $data = $datos->select(
+            'persons.names',
+            'persons.token',
+            'persons.id',
+            'divisions.names as div',
+            'rols.rol',
+            'persons_checks.moment_enter',
+            'persons_checks.moment_exit'
+        )->get();
 
         $list = [];
 
-        $times = [];
+        foreach ($data as $registro) {
+            $entrada = $registro->moment_enter ? Carbon::parse($registro->moment_enter) : null;
+            $salida = $registro->moment_exit ? Carbon::parse($registro->moment_exit) : null;
 
-        for ($i = 0; $i <= count($data) - 1; $i++) {
+            $diff = 0;
 
-            $start = Carbon::parse($data[$i]['moment']);
-
-            if ($i + 1 <= count($data) - 1) {
-
-                $end = Carbon::parse($data[$i+1]['moment']);
-
-            } else {
-
-                $data[$i]['dend'] = '-';
-
-                $data[$i]['dstar'] = $data[$i]['moment'];
-
-                $data[$i]['hours'] = 0;
-
-                $list[] = $data[$i];
-
-                break;
+            if ($entrada && $salida && $salida->gte($entrada)) {
+                $diff = $entrada->diffInSeconds($salida);
             }
 
-            if ( $start->day == $end->day) {
+            $horas_int = floor($diff / 3600);
+            $minutos_int = floor(($diff % 3600) / 60);
+            $segundos_int = $diff % 60;
 
-                $hours = (Carbon::parse($data[$i+1]['moment'])->diffInMinutes(Carbon::parse($data[$i]['moment'])));
-
-                $times[] = $hours ;
-
-                $data[$i]['dend'] = $data[$i+1]['moment'];
-
-                $data[$i]['dstar'] = $data[$i]['moment'];
-
-                if (!is_int( $hours / 60)) {
-
-                    $aux = (string) $hours /60;
-
-                    $h = explode('.', $aux);
-
-                    $h[1] = round(((int) substr( $h[1], 0, 2) / 100) * 60);
-
-                    $h[1] = $h[1] < 10 ? '0'.$h[1] : $h[1];
-                }  else {
-
-                    $h[0] = $hours / 60;  $h[1] = 0;
-                }
-
-                $data[$i]['hours'] = $h[0] . ':' . $h[1]; // number_format($hours / 60, 2, ':', '');
-
-                $list[] = $data[$i]->toArray();
-
-                if (($i + 2) <= count($data) - 1) {
-
-                    if ($end->day < Carbon::parse($data[$i+2]['moment'])->day) {
-
-                        $totalminut = collect($times)->reduce(function ($carry, $item) {
-                            return $carry + $item;
-                        });
-
-                        $aux = (string) $totalminut  /60;
-
-                        $h = explode('.', $aux);
-
-                        $h[1] = round(((int) substr( $h[1], 0, 2) / 100) * 60);
-
-                        $h[1] = $h[1] < 10 ? '0'.$h[1] : $h[1];
-
-                        $list[] =['names'=> '', 'token' =>'', 'div' => '', 'rol' => '',  'moment' => '-', 'dstar' => '', 'dend' => 'Total', 'hours' => $h[0] . ':' . $h[1]];
-
-                        $times= [];
-                    }
-
-                }
-
-                $i = $i + 1;
-
-                if (($i + 2) > count($data) - 1) { $i = count($data) - 1;}
+            $horas = sprintf('%02d:%02d:%02d', $horas_int, $minutos_int, $segundos_int);
 
 
-            } else {
 
-                $data[$i]['dend'] = '-';
-
-                $data[$i]['dstar'] = $data[$i]['moment'];
-
-                $data[$i]['hours'] = '0';
-
-                $list[] = $data[$i]->toArray();
-
-                $totalminut = collect($times)->reduce(function ($carry, $item) {
-                    return $carry + $item;
-                });
-
-                $hours = $totalminut * (1/60);
-
-                $list[] =  ['names'=> '', 'token' =>'', 'div' => '', 'rol' => '',  'moment' => '-', 'dstar' => '', 'dend' => 'Total', 'hours' => number_format($hours, 2, '.', '')];
-
-                $times= [];
-            }
-
+            $list[] = [
+                'names' => $registro->names,
+                'token' => $registro->token,
+                'div' => $registro->div,
+                'rol' => $registro->rol,
+                'moment_enter' => $registro->moment_enter,
+                'moment_exit' => $registro->moment_exit,
+                'hours' => $horas,
+                'seconds' => $diff,
+            ];
         }
-      //  return response()->json($list, 200);
 
-        $result = [
+        return $list;
+    }
 
-            'list' =>  $list,
 
-            'filters' =>  $filters,
+    public function pdf(Request $request)
+    {
+        $filters = $request->input('filters');
+        $list = $this->getRawList($filters);
 
-            'company' => Company::first()
+        if (count($list) <= 0) {
+            return response()->json('No existen datos!', 500);
+        }
 
+        $agrupados = collect($list)->groupBy('token');
+
+        $resumen = [];
+
+        foreach ($agrupados as $token => $registros) {
+            $totalSec = $registros->sum('seconds');
+            $horas_int = floor($totalSec / 3600);
+            $minutos_int = floor(($totalSec % 3600) / 60);
+            $segundos_int = $totalSec % 60;
+            $horas = sprintf('%02d:%02d:%02d', $horas_int, $minutos_int, $segundos_int);
+
+            $resumen[$token] = $horas;
+        }
+
+        $data = [
+            'filters' => $filters,
+            'company' => Company::first(),
+            'agrupados' => $agrupados,
+            'totales' => $resumen,
         ];
 
-        if (count($list) <= 0) { return response()->json('No exiten datos!', 500);}
-        if (count($list) <= 0) { return response()->json('No exiten datos!', 500);}
-
-        $footer = \View::make('reports.footer_simple')->render();
-
-        $html = \View::make('reports.pdf',  $result)->render();
-
-        $pdf->loadHTML($html)->setOption('footer-html', $footer);
-
-        $pdfBase64 = base64_encode($pdf->inline());
-
-        return 'data:application/pdf;base64,' . $pdfBase64;
+        // Generar el PDF
+        $pdf = Pdf::loadView('reports.pdf', $data);
+        return $pdf->download('reporte.pdf');
     }
 
-    public function export (Request $request) {
+    public function export(Request $request)
+    {
+        $filters = $request->input('filters', []);
+        $list = $this->generateList($filters);
 
+        if (count($list) <= 0) {
+            return response()->json('No existen datos para exportar', 500);
+        }
 
-        $filters = $request->all();
+        $list = $this->generateList($filters);
+        return \Excel::download(new PersonCheckXls($list), 'reporte.xlsx');
 
-        return \Excel::download(new PersonCheckXls($filters), 'personal.xlsx');
     }
+
+    private function generateList($filters)
+    {
+        $person_id = $filters['person'] ?? 0;
+        $dstar = $filters['dstar'] ?? now()->startOfDay();
+        $dend = $filters['dend'] ?? now()->endOfDay();
+        $division = $filters['division'] ?? 0;
+        $rol = $filters['rol'] ?? 0;
+
+        $datos = Person::leftjoin('persons_divisions', 'persons_divisions.person_id', 'persons.id')
+            ->leftjoin('divisions', 'persons_divisions.division_id', 'divisions.id')
+            ->leftjoin('persons_rols', 'persons_rols.person_id', 'persons.id')
+            ->leftjoin('rols', 'persons_rols.rol_id', 'rols.id')
+            ->leftjoin('persons_checks', 'persons_checks.person_id', 'persons.id');
+
+        if ($person_id > 0)
+            $datos->where('persons.id', $person_id);
+        if ($division > 0)
+            $datos->where('divisions.id', $division);
+        if ($rol > 0)
+            $datos->where('rols.id', $rol);
+
+        $datos->whereBetween('moment', [$dstar, $dend]);
+        $datos->orderBy('persons.token')
+            ->orderBy('persons_checks.moment_enter', 'desc');
+
+        $data = $datos->select(
+            'persons.names',
+            'persons.token',
+            'persons.id',
+            'divisions.names as div',
+            'rols.rol',
+            'persons_checks.moment_enter',
+            'persons_checks.moment_exit'
+        )->get();
+
+        $list = [];
+
+        foreach ($data as $registro) {
+            $entrada = $registro->moment_enter ? Carbon::parse($registro->moment_enter) : null;
+            $salida = $registro->moment_exit ? Carbon::parse($registro->moment_exit) : null;
+
+            if ($entrada && $salida) {
+                $diff = $entrada->diffInSeconds($salida);
+                $horas_int = floor($diff / 3600);
+                $minutos_int = floor(($diff % 3600) / 60);
+                $segundos_int = $diff % 60;
+
+                $horas = sprintf('%02d:%02d:%02d', $horas_int, $minutos_int, $segundos_int);
+
+            } else {
+                $horas = '00:00:00';
+            }
+
+            $list[] = [
+                'names' => $registro->names,
+                'token' => $registro->token,
+                'div' => $registro->div,
+                'rol' => $registro->rol,
+                'moment_enter' => $registro->moment_enter,
+                'moment_exit' => $registro->moment_exit,
+                'hours' => $horas
+            ];
+        }
+
+        return $list;
+    }
+
+
+
 }
