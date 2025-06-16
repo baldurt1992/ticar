@@ -6,6 +6,8 @@ new Vue({
     el: '#app',
     data() {
         return {
+            totales_tokens: {},
+            tokens_finalizados: [],
             file: null,
             formData: 0,
             delobj: '',
@@ -46,18 +48,23 @@ new Vue({
     },
     watch: {
         'filters.division': function () {
+            this.pager.page = 1;
             this.getlist()
         },
         'filters.rol': function () {
+            this.pager.page = 1;
             this.getlist()
         },
         'filters.person': function () {
+            this.pager.page = 1;
             this.getlist()
         },
         'filters.dstar': function () {
+            this.pager.page = 1;
             this.getlist()
         },
         'filters.dend': function () {
+            this.pager.page = 1;
             this.getlist()
         },
     },
@@ -95,8 +102,21 @@ new Vue({
     },
 
     methods: {
+        totalHoras(group) {
+            let total = 0;
+            group.forEach(item => {
+                if (item.hours) {
+                    const [h, m] = item.hours.split(':').map(n => parseInt(n));
+                    total += h * 60 + m;
+                }
+            });
+            const horas = Math.floor(total / 60);
+            const minutos = total % 60;
+            return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
+        },
+
         formatFecha(fecha) {
-            return fecha ? moment(fecha).format('DD/MM/YY HH:mm') : '-';
+            return fecha ? moment.utc(fecha).local().format('DD/MM/YY HH:mm:ss') : '-';
         },
         getpdf() {
             this.spin = true;
@@ -181,7 +201,7 @@ new Vue({
             this.filters.dend = 0
         },
         getlist(pFil, pOrder, pPager) {
-            if (pFil !== undefined) { this.filters = pFil }
+            if (pFil !== undefined) { this.filters = pFil, this.pager.page = 1 }
 
             if (pOrder !== undefined) { this.orders = pOrder }
 
@@ -208,7 +228,11 @@ new Vue({
 
                 this.persons = response.data.persons;
 
-                this.totalpage = Math.ceil(response.data.total / this.pager.recordpage)
+                this.totalpage = Math.ceil(response.data.total / this.pager.recordpage);
+
+                this.totales_tokens = response.data.totales_tokens || {};
+
+                this.tokens_finalizados = response.data.tokens_finalizados || [];
 
             }).catch(e => {
 
@@ -217,5 +241,17 @@ new Vue({
                 this.$toasted.show(e.response.data, toast_options);
             })
         }
+    },
+    computed: {
+        groupedLists() {
+            const grouped = {};
+            this.lists.forEach(item => {
+                const key = item.token || item.person_id;
+                if (!grouped[key]) grouped[key] = [];
+                grouped[key].push(item);
+            });
+            return grouped;
+        }
     }
+
 });

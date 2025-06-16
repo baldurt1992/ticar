@@ -170,7 +170,11 @@ class PersonsController extends Controller
         }
 
         if ($data['accion'] === 'entrada') {
-            return $this->checkEntrada($data, $person);
+            if (isset($data['motive_id']) && $data['motive_id'] > 0) {
+                return $this->checkEntradaOtros($data, $person);
+            } else {
+                return $this->checkEntrada($data, $person);
+            }
         }
 
         if ($data['accion'] === 'salida') {
@@ -178,6 +182,30 @@ class PersonsController extends Controller
         }
 
         return response()->json('Acción no válida', 500);
+    }
+
+    protected function checkEntradaOtros($data, $person)
+    {
+        $entradaNormal = PersonCheck::where('person_id', $person->id)
+            ->whereNull('moment_exit')
+            ->where('motive_id', 0)
+            ->first();
+
+        if (!$entradaNormal) {
+            return response()->json('No puedes registrar una entrada OTROS sin una entrada normal activa.', 400);
+        }
+
+        $entradaOtros = PersonCheck::where('person_id', $person->id)
+            ->whereNull('moment_exit')
+            ->where('motive_id', '>', 0)
+            ->first();
+
+        if ($entradaOtros) {
+            return response()->json('Ya tienes una entrada OTROS activa. Debes marcar salida antes de ingresar otra.', 400);
+        }
+
+        return $this->registrarEntrada($data, $person);
+
     }
 
     protected function checkEntrada($data, $person)
@@ -197,26 +225,81 @@ class PersonsController extends Controller
 
     protected function checkSalida($data, $person)
     {
-        $entradaAbierta = PersonCheck::where('person_id', $person->id)
+        $entradaNormal = PersonCheck::where('person_id', $person->id)
             ->whereNull('moment_exit')
             ->where('motive_id', 0)
             ->first();
 
-        if ($entradaAbierta) {
-            $entradaAbierta->update([
-                'moment_exit' => Carbon::now()->format('Y-m-d H:i:s')
+        $entradaOtros = PersonCheck::with('motive')
+            ->where('person_id', $person->id)
+            ->whereNull('moment_exit')
+            ->where('motive_id', '>', 0)
+            ->first();
+
+        if ($entradaOtros && $data['note'] === '(regreso)') {
+            if ($entradaOtros->motive_id > 0 && $entradaOtros->motive) {
+                $motivoNombre = $entradaOtros->motive->motive;
+                $entradaOtros->update([
+                    'moment_exit' => now(),
+                    'note' => 'Salida generada desde motivo "' . $motivoNombre . '"'
+                ]);
+            }
+
+            Mail::to($person->email)->send(new CheckConfirmation($person, 'salida', now()));
+            return response()->json("Salida OTROS con motivo \"{$entradaOtros->motive->motive}\" cerrada correctamente.", 200);
+        }
+
+        if ($entradaNormal && $entradaOtros) {
+            $entradaNormal->update([
+                'moment_exit' => now(),
+                'note' => ($entradaNormal->note ?? '') . ' (salida automática)'
+            ]);
+
+            $motivoNombre = optional($entradaOtros->motive)->motive ?? 'desconocido';
+            $entradaOtros->update([
+                'moment_exit' => now(),
+                'note' => ($entradaOtros->note ?? '') . " (salida automática desde motivo \"$motivoNombre\")"
             ]);
 
             Mail::to($person->email)->send(new CheckConfirmation($person, 'salida', now()));
+            return response()->json("Se cerraron ambas entradas: normal y OTROS con motivo \"$motivoNombre\".", 200);
+        }
 
+        if ($entradaNormal) {
+            $entradaNormal->update([
+                'moment_exit' => now(),
+            ]);
+
+            Mail::to($person->email)->send(new CheckConfirmation($person, 'salida', now()));
             return response()->json('Salida registrada con éxito. Gracias ' . $person->names, 200);
+        }
+
+        if ($entradaOtros) {
+            if ($entradaOtros->motive_id > 0 && $entradaOtros->motive) {
+                $motivoNombre = $entradaOtros->motive->motive;
+                $entradaOtros->update([
+                    'moment_exit' => now(),
+                    'note' => ($entradaOtros->note ?? '') . ' (salida automática desde motivo "' . $motivoNombre . '")'
+                ]);
+
+                Mail::to($person->email)->send(new CheckConfirmation($person, 'salida', now()));
+                return response()->json("Salida OTROS con motivo \"$motivoNombre\" cerrada automáticamente.", 200);
+            } else {
+                $entradaOtros->update([
+                    'moment_exit' => now(),
+                    'note' => ($entradaOtros->note ?? '') . ' (salida automática)'
+                ]);
+
+                Mail::to($person->email)->send(new CheckConfirmation($person, 'salida', now()));
+                return response()->json('Salida registrada sin entrada previa. Entrada automática generada.', 200);
+            }
         }
 
         PersonCheck::create([
             'person_id' => $person->id,
-            'moment' => Carbon::now(),
+            'moment' => now(),
             'moment_enter' => null,
-            'moment_exit' => Carbon::now()->format('Y-m-d H:i:s'),
+            'moment_exit' => now(),
             'division_id' => $data['division_id'] ?? null,
             'motive_id' => 0,
             'note' => 'Entrada automática (marcado solo salida)',
@@ -225,7 +308,6 @@ class PersonsController extends Controller
         ]);
 
         Mail::to($person->email)->send(new CheckConfirmation($person, 'salida', now()));
-
         return response()->json('Salida registrada sin entrada previa. Entrada automática generada.', 200);
     }
 
@@ -238,7 +320,7 @@ class PersonsController extends Controller
             'moment' => $moment,
             'moment_enter' => $moment->format('Y-m-d H:i:s'),
             'division_id' => $data['division_id'],
-            'motive_id' => 0,
+            'motive_id' => $data['motive_id'] ?? 0,
             'note' => $data['note'] ?? '',
             'url_screen' => null,
             'check_ip' => request()->ip()

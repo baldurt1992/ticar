@@ -31,6 +31,11 @@
                     {{$ls['hours']}}
                 </td>
             </tr>
+
         @endforeach
+        <tr style="font-weight: bold; background-color: #f0f0f0;">
+            <td colspan="6" style="text-align: right;">Total horas acumuladas:</td>
+            <td style="text-align: right;">{{ $total_horas }}</td>
+        </tr>
     </tbody>
 </table>
