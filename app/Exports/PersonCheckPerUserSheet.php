@@ -10,11 +10,14 @@ class PersonCheckPerUserSheet implements FromView, WithTitle
 {
     protected $token;
     protected $list;
+    protected $columns;
 
-    public function __construct(string $token, $list)
+
+    public function __construct(string $token, $list, $columns)
     {
         $this->token = $token;
         $this->list = $list;
+        $this->columns = $columns;
     }
 
     public function view(): View
@@ -37,7 +40,8 @@ class PersonCheckPerUserSheet implements FromView, WithTitle
 
         return view('reports.xls', [
             'list' => $this->list,
-            'total_horas' => $total_horas
+            'total_horas' => $total_horas,
+            'columns' => $this->columns
         ]);
     }
 

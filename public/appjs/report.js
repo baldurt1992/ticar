@@ -6,6 +6,30 @@ new Vue({
     el: '#app',
     data() {
         return {
+            userSearch: '',
+            selectedUsers: [],
+            custom_report: {
+                name: '',
+                columns: [],
+                filters: {},
+                format: 'pdf',
+                schedule: 'monthly',
+                custom_day: null,
+                custom_time: null,
+                timezone: null,
+            },
+            start_date: null,
+            emailInput: '',
+            formatSelection: [],
+            fieldOptions: [
+                { id: 'division', label: 'Sucursal' },
+                { id: 'role', label: 'Rol' },
+                { id: 'token', label: 'Código' },
+                { id: 'name', label: 'Nombre' },
+                { id: 'moment_enter', label: 'Entrada' },
+                { id: 'moment_exit', label: 'Salida' },
+                { id: 'hours', label: 'Horas' },
+            ],
             totales_tokens: {},
             tokens_finalizados: [],
             file: null,
@@ -69,27 +93,38 @@ new Vue({
         },
     },
     mounted() {
-        $('input[name="datetimes"]').daterangepicker({
-            timePicker: true,
-            opens: 'left',
-            cancelClass: "btn-danger",
-            startDate: moment().startOf('month').startOf('day'),
-            endDate: moment().endOf('day'),
-            locale: {
-                applyLabel: "Aplicar",
-                cancelLabel: "Anular",
-                fromLabel: "de",
-                toLabel: "a",
-                customRangeLabel: "personalisar",
-                weekLabel: "S",
-                daysOfWeek: ["Do", "Lu", "Mar", "Mir", "Jue", "Vi", "Sa"],
-                monthNames: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"],
-                format: 'D-M-Y hh:mm A'
+        axios.get(`${urldomine}api/users/list`, {
+            params: {
+                start: 0,
+                take: 1000,
+                filters: { field: 'name', value: '' },
+                orders: { field: 'name', type: 'asc' }
             }
-        }, (start, end, label) => {
-            this.filters.dstar = start.format('YYYY-MM-DD HH:mm:ss');
-            this.filters.dend = end.format('YYYY-MM-DD HH:mm:ss');
-        });
+        }).then(response => {
+            this.persons = response.data.list;
+        }),
+
+            $('input[name="datetimes"]').daterangepicker({
+                timePicker: true,
+                opens: 'left',
+                cancelClass: "btn-danger",
+                startDate: moment().startOf('month').startOf('day'),
+                endDate: moment().endOf('day'),
+                locale: {
+                    applyLabel: "Aplicar",
+                    cancelLabel: "Anular",
+                    fromLabel: "de",
+                    toLabel: "a",
+                    customRangeLabel: "personalisar",
+                    weekLabel: "S",
+                    daysOfWeek: ["Do", "Lu", "Mar", "Mir", "Jue", "Vi", "Sa"],
+                    monthNames: ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"],
+                    format: 'D-M-Y hh:mm A'
+                }
+            }, (start, end, label) => {
+                this.filters.dstar = start.format('YYYY-MM-DD HH:mm:ss');
+                this.filters.dend = end.format('YYYY-MM-DD HH:mm:ss');
+            });
 
         const picker = $('input[name="datetimes"]').data('daterangepicker');
 
@@ -99,9 +134,92 @@ new Vue({
         this.formData = new FormData();
 
         this.getlist();
+
+        this.fieldOptions.forEach(field => {
+            const el = document.getElementById(field.id);
+            if (el) {
+                el.addEventListener('change', () => {
+                    const checked = el.checked;
+                    const index = this.custom_report.columns.indexOf(field.id);
+                    if (checked && index === -1) {
+                        this.custom_report.columns.push(field.id);
+                    } else if (!checked && index !== -1) {
+                        this.custom_report.columns.splice(index, 1);
+                    }
+                });
+            }
+        });
+
+        $('#CustomReport').on('shown.bs.modal', () => {
+            $('#calendar').datepicker('destroy').datepicker({
+                format: 'yyyy-mm-dd',
+                todayHighlight: true,
+                autoclose: true,
+                defaultViewDate: new Date(),
+                inline: true
+            }).on('changeDate', e => {
+                this.custom_report.custom_day = parseInt(e.format(0, 'dd'), 10);
+            });
+        });
     },
 
     methods: {
+        getUsers() {
+            axios.get('/api/users/list', {
+                params: {
+                    filters: { value: '', field: 'name' },
+                    start: 0,
+                    take: 1000,
+                    orders: { field: 'name', type: 'asc' }
+                }
+            }).then(res => {
+                this.allUsers = res.data.list;
+            });
+        },
+        toggleUser(user) {
+            const idx = this.selectedUsers.findIndex(u => u.id === user.id);
+            if (idx >= 0) {
+                this.selectedUsers.splice(idx, 1);
+            } else {
+                this.selectedUsers.push(user);
+            }
+        },
+        removeUser(user) {
+            this.selectedUsers = this.selectedUsers.filter(u => u.id !== user.id);
+        },
+        isSelected(user) {
+            return this.selectedUsers.some(u => u.id === user.id);
+        },
+
+        createCustomReport() {
+            this.custom_report.format = this.formatSelection.length === 2 ? 'both' : this.formatSelection[0] || 'pdf';
+            this.custom_report.emails = this.selectedUsers.map(u => u.email);
+            this.custom_report.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+            axios.post(`${urldomine}custom-reports`, this.custom_report)
+                .then(response => {
+                    this.$toasted.show(response.data.message, toast_options);
+                    $('#CustomReport').modal('hide');
+                    this.reset();
+                })
+                .catch(error => {
+                    const msg = error.response?.data?.message || 'Error al guardar el reporte';
+                    this.$toasted.show(msg, toast_options);
+                });
+        },
+        reset() {
+            this.custom_report = {
+                name: '',
+                columns: [],
+                filters: {},
+                format: 'pdf',
+                schedule: 'monthly',
+                custom_day: null,
+                custom_time: null
+            };
+            this.formatSelection = [];
+        },
+
         totalHoras(group) {
             let total = 0;
             group.forEach(item => {
@@ -156,7 +274,11 @@ new Vue({
         getxls() {
             this.spin = true;
 
-            axios.post(urldomine + 'api/reports/export', { filters: this.filters }, {
+            axios.post(urldomine + 'api/reports/export', {
+                filters: this.filters,
+                columns: ['division', 'role', 'token', 'name', 'moment_enter', 'moment_exit', 'hours']
+            }, {
+
                 responseType: 'blob'
             }).then(response => {
                 this.spin = false;
@@ -243,6 +365,13 @@ new Vue({
         }
     },
     computed: {
+        filteredUsers() {
+            const q = (this.userSearch || '').toLowerCase();
+            return this.persons.filter(u =>
+                (u.names || '').toLowerCase().includes(q) ||
+                (u.email || '').toLowerCase().includes(q)
+            );
+        },
         groupedLists() {
             const grouped = {};
             this.lists.forEach(item => {

@@ -135,7 +135,6 @@ new Vue({
                             this.user.note = '';
                             this.check();
 
-                            // 🔥 Aquí debes forzar actualización nuevamente luego de la salida
                             setTimeout(() => {
                                 this.actualizarPendingMotive();
                                 this.validarEntradaNormal();
@@ -145,7 +144,6 @@ new Vue({
                             this.user.note = 'Entrada automática al marcar solo salida';
                             this.check();
 
-                            // 🔥 También forzar después de marcar entrada automática
                             setTimeout(() => {
                                 this.actualizarPendingMotive();
                                 this.validarEntradaNormal();
@@ -170,7 +168,7 @@ new Vue({
         },
 
         marcarRegreso() {
-            $('#modal-otros-activo').modal('hide'); // 👈 Esto es lo que faltaba
+            $('#modal-otros-activo').modal('hide')
 
             this.actionType = 'salida';
             this.user.motive_id = this.pending_check_motive;
@@ -192,13 +190,17 @@ new Vue({
             axios.get(urldomine + 'api/divisions/data/' + this.user.token)
                 .then(res => {
                     this.pending_check_motive = res.data.pending_check_motive || 0;
-                    console.log('Motivo pendiente:', this.pending_check_motive);
 
                     if (this.pending_check_motive > 0) {
                         const motivo = this.getMotivoNombre(this.pending_check_motive);
                         document.getElementById('mensaje-otros-activo').innerText =
                             `Ya tienes una entrada registrada con motivo "${motivo}", ¿quieres marcar el regreso?`;
                         $('#modal-otros-activo').modal('show');
+                        return;
+                    }
+
+                    if (!res.data.has_open_check) {
+                        this.$toasted.global.error({ message: 'Debes tener una entrada activa para registrar un motivo OTROS.' });
                         return;
                     }
 
@@ -264,7 +266,6 @@ new Vue({
                     } else {
                         this.user.division_id = res.data.division[0].id;
 
-                        // 🔥 Aquí detectamos si hay motivo: se asume entrada OTROS
                         this.actionType = (this.user.motive_id > 0 || this.pending_check_motive > 0)
                             ? 'entrada'
                             : 'salida';

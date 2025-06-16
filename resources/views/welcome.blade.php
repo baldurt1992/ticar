@@ -72,7 +72,7 @@
         : (pending_check_motive > 0
             ? 'Ya tienes una entrada abierta con motivo ' + getMotivoNombre(pending_check_motive)
             : '')">
-                   OTR
+                                OTROS
                             </button>
 
 
@@ -119,33 +119,6 @@
             </div>
         </div>
 
-        <div id="div" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
-            aria-hidden="true">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header bg-info">
-                        <h5 class="modal-title" style="color: black" id="exampleModalLabel">Sucursal</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="custom-controls-stacked">
-                            <div v-for="div in divisions" class="custom-control custom-radio mb-3">
-                                <input type="radio" :id="'c1' + div . id" name="customRadio" :value="div . id"
-                                    class="custom-control-input" v-model="user.division_id">
-                                <label class="custom-control-label" :for="'c1' + div . id">@{{ div.names }}</label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button :disabled="user . division_id === 0" @click="check()"
-                            class="btn btn-danger btn-sm">CHEQUEAR</button>
-                        <a href="#" data-dismiss="modal" class="btn btn-default  btn-sm">Cerrar</a>
-                    </div>
-                </div>
-            </div>
-        </div>
         <div id="modal-registro" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
             aria-hidden="true">
             <div class="modal-dialog" role="document">

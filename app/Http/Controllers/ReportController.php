@@ -106,7 +106,7 @@ class ReportController extends Controller
         $result = [
             'total' => $total,
             'list' => $list,
-            'persons' => Person::select('id', 'names')->get(),
+            'persons' => Person::select('id', 'names', 'email')->get(),
             'motives' => Motive::all(),
             'rols' => Rol::all(),
             'divisions' => Division::select('id', 'names')->get(),

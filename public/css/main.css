@@ -201,3 +201,11 @@ option {
 .overflow-persons {
     overflow-x: scroll !important;
 }
+
+#calendar .datepicker {
+    width: 100% !important;
+}
+
+.table-condensed {
+    width: 100% !important;
+}
