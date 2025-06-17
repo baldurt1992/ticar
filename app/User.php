@@ -16,7 +16,10 @@ class User extends Authenticatable
      * @var array
      */
     protected $fillable = [
-        'name', 'email', 'password', 'status_id'
+        'name',
+        'email',
+        'password',
+        'status_id'
     ];
 
     /**
@@ -25,8 +28,15 @@ class User extends Authenticatable
      * @var array
      */
     protected $hidden = [
-        'password', 'remember_token',
+        'password',
+        'remember_token',
     ];
+
+
+    public function getCompany()
+    {
+        return Company::first();
+    }
 
     public function Status()
     {

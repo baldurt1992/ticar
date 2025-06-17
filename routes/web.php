@@ -62,6 +62,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/checks/{id?}', [CheckController::class, 'index'])->name('check');
     Route::get('/report', [ReportController::class, 'index'])->name('report');
     Route::post('/custom-reports', [CustomReportController::class, 'store']);
+    Route::post('/company/logo-upload', [CompanyController::class, 'uploadLogo'])->name('company.uploadLogo');
 });
 
 Route::get('/home', [HomeController::class, 'index'])->name('home');
