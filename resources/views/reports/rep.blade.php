@@ -6,15 +6,10 @@
         <div class="col-lg-12">
             <div class="card card-small mb-4">
                 <div class="card-header border-bottom">
-                    <div class="row align-items-center mb-3 justify-content-between">
+                    <div class="row align-items-center mb-3 ">
                         <div class="col-12 col-md-auto mb-2 mb-md-0">
                             <button class="btn btn-success mr-1" @click="getpdf()"><i class="fa fa-file-pdf"></i></button>
                             <button class="btn btn-success" @click="getxls()"><i class="fa fa-file-excel"></i></button>
-                        </div>
-                        <div class="col-12 col-md-auto mb-2 mb-md-0 ">
-                            <button type="button" data-toggle="modal" data-target="#CustomReport"
-                                class="btn btn-dark font-weight-bold">Reporte
-                                personalizado</button>
                         </div>
                     </div>
                 </div>
@@ -121,124 +116,6 @@
             </div>
         </div>
     </div>
-
-    <div class="modal fade" id="CustomReport" tabindex="-1" aria-labelledby="CustomReport" aria-hidden="true">
-        <div class="modal-dialog" style="max-width: 40vw; min-height:auto; height:auto;">
-            <div class="modal-content" style="height:100%; width: auto;">
-                <div class="modal-header">
-                    <h5 class="modal-title text-light" id="CustomReport">Reporte personalizado</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="d-flex flex-column col-md-6">
-                            <h4 class="font-weight-bold text-dark">Campos del reporte</h4>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="" id="division">
-                                <label class="form-check-label" for="division">Sucursal</label>
-                            </div>
-
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="" id="role">
-                                <label class="form-check-label" for="role">Rol</label>
-                            </div>
-
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="" id="token">
-                                <label class="form-check-label" for="token">Código</label>
-                            </div>
-
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="" id="name">
-                                <label class="form-check-label" for="name">Nombre</label>
-                            </div>
-
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="" id="moment_enter">
-                                <label class="form-check-label" for="moment_enter">Entrada</label>
-                            </div>
-
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="" id="moment_exit">
-                                <label class="form-check-label" for="moment_exit">Salida</label>
-                            </div>
-
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="" id="hours">
-                                <label class="form-check-label" for="hours">Horas</label>
-                            </div>
-                            <div class="mt-3">
-                                <h4 class=" text-dark font-weight-bold">Formato</h4>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="" id="pdf">
-                                    <label class="form-check-label" for="pdf">PDF</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="" id="excel">
-                                    <label class="form-check-label" for="excel">Excel</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class=" d-flex flex-column">
-                                <h4 class="text-dark font-weight-bold mb-2">Selecciona el día</h4>
-                                <div id="calendar" class="mb-4" style="min-height: 250px;"></div>
-
-                                <h4 class="text-dark font-weight-bold mb-2">Selecciona periodicidad</h4>
-                                <select class="form-control" v-model="custom_report.schedule">
-                                    <option value="daily">Todos los días</option>
-                                    <option value="weekly">Cada semana</option>
-                                    <option value="monthly">Cada mes</option>
-                                </select>
-
-                                <label class="mt-3 font-weight-bold text-dark">Hora de envío</label>
-                                <input type="time" class="form-control" v-model="custom_report.custom_time">
-                                <div class="form-group mt-3">
-                                    <label for="userSearch">Seleccionar usuarios para enviar</label>
-
-                                    <div class="dropdown">
-                                        <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
-                                            v-model="userSearch" placeholder="Buscar por nombre o correo"
-                                            autocomplete="off" />
-
-                                        <div class="dropdown-menu" style="width: 100%; max-height: 200px; overflow-y: auto;"
-                                            v-if="filteredUsers.length">
-                                            <button class="dropdown-item d-flex justify-content-between align-items-center"
-                                                v-for="user in filteredUsers" :key="user.id"
-                                                @click.prevent="toggleUser(user)">
-                                                <span>@{{ user.names }} - @{{ user.email }}</span>
-                                                <i class="fa"
-                                                    :class="isSelected(user) ? 'fa-check-square text-success' : 'fa-square-o text-muted'"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <label class="mt-3 font-weight-bold text-dark">Correos adicionales</label>
-                                    <input type="text" class="form-control" v-model="emailInput"
-                                        placeholder="correo@dominio.com, otro@dominio.com">
-                                    <div class="mt-2">
-                                        <span v-for="user in selectedUsers" :key="user.id" class="badge badge-primary mr-1">
-                                            @{{ user.names }}
-                                            <i class="fa fa-times ml-1" @click="removeUser(user)"
-                                                style="cursor: pointer;"></i>
-                                        </span>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary " data-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-success" @click="createCustomReport">Crear reporte</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     @component('components.eliminar')@endcomponent
     @component('components.spiner')@endcomponent
 @endsection

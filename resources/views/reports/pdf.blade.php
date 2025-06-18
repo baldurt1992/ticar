@@ -1,3 +1,7 @@
+@php
+    $columns = $columns ?? ['div', 'rol', 'token', 'names', 'moment_enter', 'moment_exit', 'hours'];
+@endphp
+
 <!doctype html>
 <html lang="es">
 
@@ -76,20 +80,26 @@
     <div class="encabezado">
         <div>
             <strong>Sucursal:</strong>
-            {{ $filters['division'] > 0 ? $filters['division'] : 'Todas' }}
+            {{ isset($filters['division']) && $filters['division'] > 0
+    ? (\App\Division::find($filters['division'])->names ?? 'Sucursal desconocida')
+    : 'Todas' }}
         </div>
         <div class="separado">
             <strong>Rol:</strong>
-            {{ $filters['rol'] > 0 ? $filters['rol'] : 'Todos' }}
+            {{ isset($filters['rol']) && $filters['rol'] > 0
+    ? (\App\Rol::find($filters['rol'])->rol ?? 'Rol desconocido')
+    : 'Todos' }}
         </div>
         <div class="separado">
             <strong>Persona:</strong>
-            {{ $filters['person'] > 0 ? $filters['person'] : 'Todas' }}
+            {{ isset($filters['person']) && $filters['person'] > 0
+    ? (\App\Person::find($filters['person'])->names ?? 'Persona desconocida')
+    : 'Todas' }}
         </div>
         <div style="display:block; margin-top: 10px;">
             <strong>Rango Fecha:</strong>
-            {{ date('d/m/Y H:i:s', strtotime($filters['dstar'])) }} a
-            {{ date('d/m/Y H:i:s', strtotime($filters['dend'])) }}
+            {{ isset($filters['dstar']) ? date('d/m/Y H:i:s', strtotime($filters['dstar'])) : 'No definido' }}
+            {{ isset($filters['dend']) ? date('d/m/Y H:i:s', strtotime($filters['dend'])) : 'No definido' }}
         </div>
     </div>
 
@@ -98,37 +108,55 @@
         <table>
             <thead>
                 <tr>
-                    <th>Sucursal</th>
-                    <th>Rol</th>
-                    <th>Código</th>
-                    <th>Nombre</th>
-                    <th>Entrada</th>
-                    <th>Salida</th>
-                    <th>Horas</th>
+                    @if(in_array('div', $columns))
+                    <th>Sucursal</th> @endif
+                    @if(in_array('rol', $columns))
+                    <th>Rol</th> @endif
+                    @if(in_array('token', $columns))
+                    <th>Código</th> @endif
+                    @if(in_array('names', $columns))
+                    <th>Nombre</th> @endif
+                    @if(in_array('moment_enter', $columns))
+                    <th>Entrada</th> @endif
+                    @if(in_array('moment_exit', $columns))
+                    <th>Salida</th> @endif
+                    @if(in_array('hours', $columns))
+                    <th>Horas</th> @endif
                 </tr>
             </thead>
             <tbody>
-                @foreach($registros as $item)
+                @foreach($registros as $ls)
                     <tr>
-                        <td>{{ $item['div'] }}</td>
-                        <td>{{ $item['rol'] }}</td>
-                        <td>{{ $item['token'] }}</td>
-                        <td>{{ $item['names'] }}</td>
-                        <td>
-                            {{ $item['moment_enter'] ? \Carbon\Carbon::parse($item['moment_enter'])->format('d/m/y H:i') : '-' }}
-                        </td>
-                        <td>
-                            {{ $item['moment_exit'] ? \Carbon\Carbon::parse($item['moment_exit'])->format('d/m/y H:i') : '-' }}
-                        </td>
-                        <td>
-                            {{ $item['hours'] ?? '0:00' }}
-                        </td>
+                        @if(in_array('div', $columns))
+                        <td>{{ $ls['div'] ?? '' }}</td> @endif
+                        @if(in_array('rol', $columns))
+                        <td>{{ $ls['rol'] ?? '' }}</td> @endif
+                        @if(in_array('token', $columns))
+                        <td style="text-align: right;">{{ $ls['token'] ?? '' }}</td> @endif
+                        @if(in_array('names', $columns))
+                        <td>{{ $ls['names'] ?? '' }}</td> @endif
+                        @if(in_array('moment_enter', $columns))
+                            <td style="text-align: center;">
+                                {{ !empty($ls['moment_enter']) ? \Carbon\Carbon::parse($ls['moment_enter'])->format('d/m/Y H:i') : '-' }}
+                            </td>
+                        @endif
+                        @if(in_array('moment_exit', $columns))
+                            <td style="text-align: center;">
+                                {{ !empty($ls['moment_exit']) ? \Carbon\Carbon::parse($ls['moment_exit'])->format('d/m/Y H:i') : '-' }}
+                            </td>
+                        @endif
+                        @if(in_array('hours', $columns))
+                            <td style="text-align: center;">{{ $ls['hours'] ?? '0:00' }}</td>
+                        @endif
                     </tr>
                 @endforeach
-                <tr class="totales">
-                    <td colspan="6" style="text-align: right;">Total horas acumuladas:</td>
-                    <td>{{ $totales[$token] ?? '0:00' }}</td>
-                </tr>
+
+                @if(in_array('hours', $columns))
+                    <tr class="totales">
+                        <td colspan="{{ count($columns) - 1 }}" style="text-align: right;">Total horas acumuladas:</td>
+                        <td style="text-align: center;">{{ $totales[$token] ?? '0:00' }}</td>
+                    </tr>
+                @endif
             </tbody>
         </table>
     @endforeach

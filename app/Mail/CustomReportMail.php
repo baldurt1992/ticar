@@ -12,14 +12,13 @@ class CustomReportMail extends Mailable
     use Queueable, SerializesModels;
 
     public $report;
-    public $attachments;
+    public $customAttachments;
 
     public function __construct(CustomReport $report, array $attachments = [])
     {
         $this->report = $report;
-        $this->attachments = $attachments;
+        $this->customAttachments = $attachments;
 
-        // Casting seguro por si vienen como string JSON
         $this->report->filters = is_array($this->report->filters)
             ? $this->report->filters
             : json_decode($this->report->filters, true) ?? [];
@@ -38,10 +37,19 @@ class CustomReportMail extends Mailable
         $mail = $this->subject('Reporte automático: ' . ($this->report->name ?? ''))
             ->view('emails.custom_report', ['report' => $this->report]);
 
-        foreach ($this->attachments as $filePath) {
-            if (file_exists($filePath)) {
-                $mail->attach($filePath);
+        if (is_array($this->customAttachments)) {
+            foreach ($this->customAttachments as $attachment) {
+                if (is_array($attachment) && isset($attachment['path']) && is_string($attachment['path'])) {
+                    $mail->attach($attachment['path'], [
+                        'as' => $attachment['name'] ?? basename($attachment['path']),
+                        'mime' => $attachment['mime'] ?? null
+                    ]);
+                } elseif (is_string($attachment) && file_exists($attachment)) {
+                    $mail->attach($attachment);
+                }
             }
+        } elseif (is_string($this->customAttachments) && file_exists($this->customAttachments)) {
+            $mail->attach($this->customAttachments);
         }
 
         return $mail;

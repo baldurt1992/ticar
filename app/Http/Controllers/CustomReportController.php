@@ -8,6 +8,11 @@ use Carbon\Carbon;
 
 class CustomReportController extends Controller
 {
+    public function index()
+    {
+        return view('reports.custom');
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([

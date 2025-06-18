@@ -61,7 +61,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/motives', [MotivesController::class, 'index'])->name('motives');
     Route::get('/checks/{id?}', [CheckController::class, 'index'])->name('check');
     Route::get('/report', [ReportController::class, 'index'])->name('report');
-    Route::post('/custom-reports', [CustomReportController::class, 'store']);
+    Route::get('/custom-reports', [CustomReportController::class, 'index'])->name('custom.reports');
+    Route::post('/custom-reports', [CustomReportController::class, 'store']); // <-- agrega esta línea
     Route::post('/company/logo-upload', [CompanyController::class, 'uploadLogo'])->name('company.uploadLogo');
 });
 

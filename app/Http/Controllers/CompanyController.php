@@ -14,7 +14,7 @@ class CompanyController extends Controller
             'logo' => 'required|image|max:5120',
         ]);
 
-        $company = \App\Company::first();
+        $company = Company::first();
 
         if (!$company) {
             return response()->json(['error' => 'Empresa no encontrada'], 404);

@@ -96,6 +96,12 @@
                                 <span>Reportes</span>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('custom.reports') }}">
+                                <i class="material-icons">insert_chart</i>
+                                <span>Reportes Personalizados</span>
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </aside>

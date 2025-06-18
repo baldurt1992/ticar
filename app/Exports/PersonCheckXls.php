@@ -9,9 +9,12 @@ class PersonCheckXls implements WithMultipleSheets
     protected $list;
     protected $columns;
 
-    public function __construct(array $list, ?array $columns = null)
+    protected $isCustom;
+
+    public function __construct(array $list, ?array $columns = null, bool $isCustom = false)
     {
         $this->list = $list;
+        $this->isCustom = $isCustom;
         $this->columns = $columns ?? [
             'division',
             'role',

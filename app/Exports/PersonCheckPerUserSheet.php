@@ -12,12 +12,14 @@ class PersonCheckPerUserSheet implements FromView, WithTitle
     protected $list;
     protected $columns;
 
+    protected $isCustom;
 
-    public function __construct(string $token, $list, $columns)
+    public function __construct(string $token, $list, $columns, $isCustom = false)
     {
         $this->token = $token;
         $this->list = $list;
         $this->columns = $columns;
+        $this->isCustom = $isCustom;
     }
 
     public function view(): View
@@ -25,9 +27,12 @@ class PersonCheckPerUserSheet implements FromView, WithTitle
         $totalMin = 0;
 
         foreach ($this->list as $item) {
-            if ($item['moment_enter'] && $item['moment_exit']) {
-                $start = \Carbon\Carbon::parse($item['moment_enter']);
-                $end = \Carbon\Carbon::parse($item['moment_exit']);
+            $enter = $item['moment_enter'] ?? null;
+            $exit = $item['moment_exit'] ?? null;
+
+            if (!empty($enter) && !empty($exit)) {
+                $start = \Carbon\Carbon::parse($enter);
+                $end = \Carbon\Carbon::parse($exit);
                 $totalMin += $start->diffInSeconds($end);
             }
         }
@@ -38,11 +43,12 @@ class PersonCheckPerUserSheet implements FromView, WithTitle
 
         $total_horas = sprintf('%02d:%02d:%02d', $horas_int, $minutos_int, $segundos_int);
 
-        return view('reports.xls', [
+        return view($this->isCustom ? 'reports.xls_custom' : 'reports.xls', [
             'list' => $this->list,
             'total_horas' => $total_horas,
             'columns' => $this->columns
         ]);
+
     }
 
     public function title(): string

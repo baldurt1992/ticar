@@ -125,7 +125,6 @@ class ReportController extends Controller
             return sprintf('%02d:%02d:%02d', $h, $m, $s);
         });
 
-        // Tokens finalizados
         $idsPorToken = PersonCheck::join('persons', 'persons_checks.person_id', '=', 'persons.id')
             ->whereBetween('persons_checks.moment', [$dstar, $dend]);
 
@@ -231,7 +230,6 @@ class ReportController extends Controller
             'totales' => $resumen,
         ];
 
-        // Generar el PDF
         $pdf = Pdf::loadView('reports.pdf', $data);
         return $pdf->download('reporte.pdf');
     }
