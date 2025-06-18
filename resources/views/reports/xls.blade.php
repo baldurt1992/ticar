@@ -1,16 +1,17 @@
 @php
     $list = collect($list)->map(function ($ls) {
         return array_merge([
-            'div' => '',
-            'rol' => '',
+            'division' => '',
+            'role' => '',
             'token' => '',
-            'names' => '',
+            'name' => '',
             'moment_enter' => null,
             'moment_exit' => null,
             'hours' => '0:00',
         ], is_array($ls) ? $ls : []);
     });
 @endphp
+
 
 <table style="width: 100%">
     <thead>
@@ -35,11 +36,11 @@
         @foreach($list as $ls)
             <tr style="font-size: 10px;">
                 @if(in_array('division', $columns))
-                    <td style="padding: 5px; border-bottom: 1px solid rgba(169,169,169,0.29)">{{ $ls['div'] }}</td>
+                    <td style="padding: 5px; border-bottom: 1px solid rgba(169,169,169,0.29)">{{ $ls['division'] }}</td>
                 @endif
 
                 @if(in_array('role', $columns))
-                    <td style="padding: 5px; border-bottom: 1px solid rgba(169,169,169,0.29)">{{ $ls['rol'] }}</td>
+                    <td style="padding: 5px; border-bottom: 1px solid rgba(169,169,169,0.29)">{{ $ls['role'] }}</td>
                 @endif
 
                 @if(in_array('token', $columns))
@@ -50,7 +51,7 @@
 
                 @if(in_array('name', $columns))
                     <td style="padding: 5px; text-align: right; border-bottom: 1px solid rgba(169,169,169,0.29)">
-                        {{ $ls['names'] }}
+                        {{ $ls['name'] }}
                     </td>
                 @endif
 
@@ -73,7 +74,6 @@
                 @endif
             </tr>
         @endforeach
-
         <tr style="font-weight: bold; background-color: #f0f0f0;">
             <td colspan="{{ count($columns) - 1 }}" style="text-align: right;">Total horas acumuladas:</td>
             <td style="text-align: right;">{{ $total_horas }}</td>

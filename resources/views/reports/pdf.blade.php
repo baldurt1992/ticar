@@ -151,12 +151,10 @@
                     </tr>
                 @endforeach
 
-                @if(in_array('hours', $columns))
-                    <tr class="totales">
-                        <td colspan="{{ count($columns) - 1 }}" style="text-align: right;">Total horas acumuladas:</td>
-                        <td style="text-align: center;">{{ $totales[$token] ?? '0:00' }}</td>
-                    </tr>
-                @endif
+                <tr class="totales">
+                    <td colspan="{{ count($columns) - 1 }}" style="text-align: right;">Total horas acumuladas:</td>
+                    <td style="text-align: center;">{{ $totales[$token] ?? '0:00' }}</td>
+                </tr>
             </tbody>
         </table>
     @endforeach

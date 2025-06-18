@@ -18,6 +18,9 @@ new Vue({
     el: '#app',
     data() {
         return {
+            dropdownOpen: false,
+            highlight: -1,
+            manualEmails: [],
             errors: {
                 columns: false,
                 format: false,
@@ -56,6 +59,8 @@ new Vue({
     mounted() {
         this.getUsers();
 
+        document.addEventListener('click', this.handleClickOutside)
+
         this.fieldOptions.forEach(field => {
             const el = document.getElementById(field.id);
             if (el) {
@@ -81,17 +86,60 @@ new Vue({
             this.custom_report.custom_day = parseInt(e.format(0, 'dd'), 10);
         });
     },
+    beforeDestroy() {
+        document.removeEventListener('click', this.handleClickOutside);
+    },
     methods: {
+        handleClickOutside(event) {
+            const dropdown = this.$el.querySelector('.dropdown-menu');
+            const input = this.$el.querySelector('input#user-search');
+
+            if (
+                this.dropdownOpen &&
+                !dropdown?.contains(event.target) &&
+                !input?.contains(event.target)
+            ) {
+                this.dropdownOpen = false;
+            }
+        },
+        addManualEmail() {
+            const correo = this.emailInput.trim();
+            if (correo && correo.includes('@') && !this.manualEmails.includes(correo)) {
+                this.manualEmails.push(correo);
+            }
+            this.emailInput = '';
+        },
+
+        removeManualEmail(index) {
+            this.manualEmails.splice(index, 1);
+        },
+        closeDropdown() {
+            setTimeout(() => {
+                this.dropdownOpen = false;
+            }, 200);
+        },
         getUsers() {
-            axios.get('/api/users/list', {
+            axios.get('/api/reports/list', {
                 params: {
-                    filters: { value: '', field: 'name' },
                     start: 0,
-                    take: 1000,
-                    orders: { field: 'name', type: 'asc' }
+                    take: 1,
+                    filters: {
+                        person: 0,
+                        division: 0,
+                        rol: 0,
+                        dstar: '2025-01-01 00:00:00',
+                        dend: '2025-01-01 23:59:59'
+                    },
+                    orders: {
+                        field: 'persons_checks.id',
+                        type: 'desc'
+                    }
                 }
             }).then(res => {
-                this.persons = res.data.list;
+                this.persons = (res.data.persons || []).map(p => ({
+                    ...p,
+                    name: p.names
+                }));
             });
         },
         toggleUser(user) {
@@ -122,6 +170,7 @@ new Vue({
                 custom_time: false,
                 emails: false
             };
+
             let valid = true;
 
             if (!this.custom_report.columns.length) {
@@ -145,16 +194,11 @@ new Vue({
                 valid = false;
             }
 
-            const correosExtras = this.emailInput
-                .split(',')
-                .map(e => e.trim())
-                .filter(e => e.includes('@'));
-
             this.custom_report.emails = [
                 ...this.selectedUsers
                     .filter(u => u.email !== 'todos@system.local')
                     .map(u => u.email),
-                ...correosExtras
+                ...this.manualEmails
             ];
 
             if (!this.custom_report.emails.length) {
@@ -189,26 +233,58 @@ new Vue({
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             };
             this.formatSelection = [];
+            this.manualEmails = [];
             this.emailInput = '';
             this.selectedUsers = [];
+            this.userSearch = '';
+            this.dropdownOpen = false;
+            this.highlight = -1;
+
+            // desmarca los checkboxes de columnas
             const checkboxes = document.querySelectorAll('input[type=checkbox]');
             checkboxes.forEach(cb => cb.checked = false);
+        },
+        selectUser(user) {
+            if (user.id === -1) {
+                // Seleccionar todos
+                this.selectedUsers = this.persons.filter(p =>
+                    !this.selectedUsers.some(s => s.id === p.id)
+                );
+            } else {
+                const idx = this.selectedUsers.findIndex(u => u.id === user.id);
+                if (idx >= 0) {
+                    this.selectedUsers.splice(idx, 1);
+                } else {
+                    this.selectedUsers.push(user);
+                }
+            }
+            this.dropdownOpen = false;
+            this.highlight = -1;
+            this.userSearch = '';
+        },
 
-        }
+        selectHighlightedUser() {
+            if (this.highlight >= 0 && this.highlight < this.filteredUsers.length) {
+                this.selectUser(this.filteredUsers[this.highlight]);
+            }
+        },
+
+
     },
     computed: {
         filteredUsers() {
             const q = (this.userSearch || '').toLowerCase();
             let base = this.persons.filter(u =>
-                (u.names || '').toLowerCase().includes(q) ||
+                (u.name || '').toLowerCase().includes(q) ||
                 (u.email || '').toLowerCase().includes(q)
             );
 
             if (q === '' || 'todos'.includes(q)) {
-                base.unshift({ id: -1, names: 'TODOS', email: 'todos@system.local' });
+                base.unshift({ id: -1, name: 'TODOS', email: 'todos@system.local' });
             }
 
             return base;
         }
+
     }
 });

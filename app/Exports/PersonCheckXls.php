@@ -8,7 +8,6 @@ class PersonCheckXls implements WithMultipleSheets
 {
     protected $list;
     protected $columns;
-
     protected $isCustom;
 
     public function __construct(array $list, ?array $columns = null, bool $isCustom = false)
@@ -24,19 +23,25 @@ class PersonCheckXls implements WithMultipleSheets
             'moment_exit',
             'hours'
         ];
-        ;
+    }
+
+    protected function mapColumns($columns)
+    {
+        return $columns;
     }
 
     public function sheets(): array
     {
         $agrupados = collect($this->list)->groupBy('token');
+        $columns = $this->isCustom ? $this->mapColumns($this->columns) : $this->columns;
 
         $sheets = [];
 
         foreach ($agrupados as $token => $registros) {
-            $sheets[] = new PersonCheckPerUserSheet($token, $registros, $this->columns);
+            $sheets[] = new PersonCheckPerUserSheet($token, $registros, $columns);
         }
 
         return $sheets;
     }
 }
+

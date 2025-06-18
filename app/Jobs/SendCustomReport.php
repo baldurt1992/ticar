@@ -77,9 +77,9 @@ class SendCustomReport implements ShouldQueue
                     'moment_enter' => $row->moment_enter,
                     'moment_exit' => $row->moment_exit,
                     'token' => $row->token,
-                    'names' => $row->name,
-                    'div' => $row->division,
-                    'rol' => $row->role,
+                    'name' => $row->name,
+                    'division' => $row->division,
+                    'role' => $row->role,
                 ];
             })
             ->toArray();
@@ -89,7 +89,27 @@ class SendCustomReport implements ShouldQueue
     private function generatePdf(array $list, CustomReport $report): string
     {
         $columns = $report->columns;
-        $agrupados = collect($list)->groupBy('token')->toArray();
+
+        $columnMap = [
+            'division' => 'div',
+            'role' => 'rol',
+            'name' => 'names',
+            'token' => 'token',
+            'moment_enter' => 'moment_enter',
+            'moment_exit' => 'moment_exit',
+            'hours' => 'hours',
+        ];
+
+        $mappedList = array_map(function ($item) use ($columnMap) {
+            $row = [];
+            foreach ($item as $key => $value) {
+                $mappedKey = $columnMap[$key] ?? $key;
+                $row[$mappedKey] = $value;
+            }
+            return $row;
+        }, $list);
+
+        $agrupados = collect($mappedList)->groupBy('token')->toArray();
 
         $totalSeconds = collect($list)->reduce(function ($carry, $item) {
             if (!empty($item['moment_enter']) && !empty($item['moment_exit'])) {
@@ -111,11 +131,14 @@ class SendCustomReport implements ShouldQueue
                 }
                 return $acc;
             }, 0);
-            return sprintf('%02d:%02d', floor($segundos / 3600), floor(($segundos % 3600) / 60));
+            $horas = floor($segundos / 3600);
+            $minutos = floor(($segundos % 3600) / 60);
+            $segundosRestantes = $segundos % 60;
+            return sprintf('%02d:%02d:%02d', $horas, $minutos, $segundosRestantes);
         })->toArray();
 
         $pdf = Pdf::loadView('reports.pdf', [
-            'columns' => $columns,
+            'columns' => array_map(fn($c) => $columnMap[$c] ?? $c, $columns),
             'total_horas' => $totalHoras,
             'company' => \App\Company::first(),
             'filters' => $report->filters ?? [],
@@ -125,6 +148,7 @@ class SendCustomReport implements ShouldQueue
 
         $pdfPath = 'reports/report_' . $report->id . '.pdf';
         Storage::put($pdfPath, $pdf->output());
+
         return storage_path("app/{$pdfPath}");
     }
 
@@ -132,40 +156,31 @@ class SendCustomReport implements ShouldQueue
     {
         $columns = $report->columns;
         $totalSeconds = 0;
-        foreach ($list as &$item) {
-            if (!empty($item['moment_enter']) && !empty($item['moment_exit'])) {
-                $start = \Carbon\Carbon::parse($item['moment_enter']);
-                $end = \Carbon\Carbon::parse($item['moment_exit']);
-                $seconds = $start->diffInSeconds($end);
-                $item['hours'] = sprintf('%02d:%02d', floor($seconds / 3600), floor(($seconds % 3600) / 60));
-                $totalSeconds += $seconds;
-            } else {
-                $item['hours'] = '0:00';
-            }
+
+        $agrupados = collect($list)->groupBy('token');
+        $finalList = [];
+
+        foreach ($agrupados as $token => $registros) {
+            $registros = collect($registros)->map(function ($item) use (&$totalSeconds) {
+                if (!empty($item['moment_enter']) && !empty($item['moment_exit'])) {
+                    $start = \Carbon\Carbon::parse($item['moment_enter']);
+                    $end = \Carbon\Carbon::parse($item['moment_exit']);
+                    $seconds = $start->diffInSeconds($end);
+                    $item['hours'] = sprintf('%02d:%02d', floor($seconds / 3600), floor(($seconds % 3600) / 60));
+                    $totalSeconds += $seconds;
+                } else {
+                    $item['hours'] = '0:00';
+                }
+                return $item;
+            })->toArray();
+
+            $finalList = array_merge($finalList, $registros);
         }
 
-        $totalHoras = sprintf('%02d:%02d:%02d', floor($totalSeconds / 3600), floor(($totalSeconds % 3600) / 60), $totalSeconds % 60);
 
-        $columnMap = [
-            'division' => 'div',
-            'role' => 'rol',
-            'name' => 'names',
-            'token' => 'token',
-            'moment_enter' => 'moment_enter',
-            'moment_exit' => 'moment_exit',
-            'hours' => 'hours',
-        ];
-
-        $finalList = array_map(function ($item) use ($columns, $columnMap) {
-            $row = [];
-            foreach ($columns as $col) {
-                $key = $columnMap[$col] ?? $col;
-                $row[$col] = $item[$key] ?? '';
-            }
-            return $row;
-        }, $list);
 
         $path = 'reports/report_' . $report->id . '.xlsx';
+
         Excel::store(new PersonCheckXls($finalList, $columns, true), $path);
 
         return storage_path("app/{$path}");

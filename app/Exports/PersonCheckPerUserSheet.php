@@ -12,14 +12,12 @@ class PersonCheckPerUserSheet implements FromView, WithTitle
     protected $list;
     protected $columns;
 
-    protected $isCustom;
 
-    public function __construct(string $token, $list, $columns, $isCustom = false)
+    public function __construct(string $token, $list, $columns, )
     {
         $this->token = $token;
         $this->list = $list;
         $this->columns = $columns;
-        $this->isCustom = $isCustom;
     }
 
     public function view(): View
@@ -43,8 +41,10 @@ class PersonCheckPerUserSheet implements FromView, WithTitle
 
         $total_horas = sprintf('%02d:%02d:%02d', $horas_int, $minutos_int, $segundos_int);
 
-        return view($this->isCustom ? 'reports.xls_custom' : 'reports.xls', [
-            'list' => $this->list,
+        $transformed = collect($this->list);
+
+        return view('reports.xls', [
+            'list' => $transformed,
             'total_horas' => $total_horas,
             'columns' => $this->columns
         ]);

@@ -217,3 +217,9 @@ option {
 .main-navbar .navbar {
     height: auto;
 }
+
+.error-span {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
