@@ -10,6 +10,7 @@ use App\Http\Controllers\MotivesController;
 use App\Http\Controllers\PersonsController;
 use App\Http\Controllers\DivisionsController;
 use App\Http\Controllers\PersonDivController;
+use App\Http\Controllers\CustomReportController;
 
 Route::get('/company/list', [CompanyController::class, 'getList']);
 Route::resource('/company', CompanyController::class);
@@ -61,7 +62,6 @@ Route::prefix('reports')->group(function () {
 });
 Route::resource('/reports', ReportController::class);
 
-// RUTAS DE USUARIOS
 Route::prefix('users')->group(function () {
     Route::get('list', [UsersController::class, 'getList']);
 });

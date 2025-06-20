@@ -315,11 +315,27 @@ class PersonsController extends Controller
     {
         $moment = Carbon::now();
 
+        // 🔒 Agrega esta validación estricta para evitar duplicaciones
+        if (!isset($data['division_id']) || !is_numeric($data['division_id'])) {
+            return response()->json('División inválida. No se puede registrar la entrada.', 400);
+        }
+
+        // ❗ Revisa si ya existe una entrada con esa división exacta y misma hora
+        $yaExiste = PersonCheck::where('person_id', $person->id)
+            ->where('division_id', $data['division_id'])
+            ->whereDate('moment', $moment->toDateString())
+            ->whereTime('moment_enter', $moment->format('H:i:s'))
+            ->exists();
+
+        if ($yaExiste) {
+            return response()->json('Entrada duplicada detectada. Ya fue registrada.', 409);
+        }
+
         PersonCheck::create([
             'person_id' => $person->id,
             'moment' => $moment,
             'moment_enter' => $moment->format('Y-m-d H:i:s'),
-            'division_id' => $data['division_id'],
+            'division_id' => $data['division_id'], // ✅ Solo una división
             'motive_id' => $data['motive_id'] ?? 0,
             'note' => $data['note'] ?? '',
             'url_screen' => null,

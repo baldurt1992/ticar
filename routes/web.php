@@ -12,7 +12,7 @@ use App\Http\Controllers\MotivesController;
 use App\Http\Controllers\CheckController;
 use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Auth;
-
+use App\Http\Controllers\CustomReportController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -36,12 +36,15 @@ Route::get('/t', function () {
 
     try {
         for ($i = 0; $i <= count($data) - 1; $i++) {
-            $times[] = \Carbon\Carbon::parse($data[$i+1]['moment'])
-                        ->diffInHours(\Carbon\Carbon::parse($data[$i]['moment']));
+            $times[] = \Carbon\Carbon::parse($data[$i + 1]['moment'])
+                ->diffInHours(\Carbon\Carbon::parse($data[$i]['moment']));
             $i++;
-            if (($i + 1) > count($data) - 1) { $i = count($data) - 1; }
+            if (($i + 1) > count($data) - 1) {
+                $i = count($data) - 1;
+            }
         }
-    } catch (Exception $e) {}
+    } catch (Exception $e) {
+    }
 
     $total = collect($times)->sum();
     echo $total;
@@ -58,7 +61,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/motives', [MotivesController::class, 'index'])->name('motives');
     Route::get('/checks/{id?}', [CheckController::class, 'index'])->name('check');
     Route::get('/report', [ReportController::class, 'index'])->name('report');
-    
+    Route::get('/custom-reports', [CustomReportController::class, 'index'])->name('custom.reports');
+    Route::post('/custom-reports', [CustomReportController::class, 'store']); // <-- agrega esta línea
+    Route::post('/company/logo-upload', [CompanyController::class, 'uploadLogo'])->name('company.uploadLogo');
 });
 
 Route::get('/home', [HomeController::class, 'index'])->name('home');
