@@ -5,19 +5,37 @@ namespace App\Exports;
 use Illuminate\Contracts\View\View;
 use Maatwebsite\Excel\Concerns\FromView;
 use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class PersonCheckPerUserSheet implements FromView, WithTitle
+class PersonCheckPerUserSheet implements FromView, WithTitle, WithStyles
 {
     protected $token;
     protected $list;
     protected $columns;
+    protected $normales;
+    protected $otros;
 
-
-    public function __construct(string $token, $list, $columns, )
+    public function __construct(string $token, $list, $columns)
     {
         $this->token = $token;
         $this->list = $list;
         $this->columns = $columns;
+
+        $this->normales = collect($list)->filter(fn($r) => ($r['motive_id'] ?? 0) == 0)->values();
+        $this->otros = collect($list)->filter(fn($r) => ($r['motive_id'] ?? 0) > 0)->values();
+    }
+
+    public function styles(Worksheet $sheet)
+    {
+        $rowStart = count($this->normales) + 8;
+        $rowEnd = $rowStart + count($this->otros) - 1;
+
+        return [
+            "A{$rowStart}:Z{$rowEnd}" => [
+                'font' => ['color' => ['rgb' => 'FF0000']]
+            ]
+        ];
     }
 
     public function view(): View
@@ -38,17 +56,15 @@ class PersonCheckPerUserSheet implements FromView, WithTitle
         $horas_int = floor($totalMin / 3600);
         $minutos_int = floor(($totalMin % 3600) / 60);
         $segundos_int = $totalMin % 60;
-
         $total_horas = sprintf('%02d:%02d:%02d', $horas_int, $minutos_int, $segundos_int);
 
-        $transformed = collect($this->list);
-
         return view('reports.xls', [
-            'list' => $transformed,
+            'list' => $this->list,
+            'normales' => $this->normales,
+            'otros' => $this->otros,
             'total_horas' => $total_horas,
-            'columns' => $this->columns
+            'columns' => $this->columns,
         ]);
-
     }
 
     public function title(): string

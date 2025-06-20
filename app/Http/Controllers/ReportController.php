@@ -32,44 +32,27 @@ class ReportController extends Controller
         ]);
     }
 
-    public function getList(Request $request)
+    private function getBaseQuery($filters)
     {
-        $skip = $request->input('start') * $request->input('take');
-        $filters = $request->input('filters', true);
-
-        $person_id = $filters['person'];
-        $dstar = $filters['dstar'];
-        $dend = $filters['dend'];
-        $division = $filters['division'];
-        $rol = $filters['rol'];
-
-        $datos = PersonCheck::join('persons', 'persons_checks.person_id', '=', 'persons.id')
+        $query = PersonCheck::join('persons', 'persons_checks.person_id', '=', 'persons.id')
             ->leftJoin('divisions', 'persons_checks.division_id', '=', 'divisions.id')
             ->leftJoin('persons_rols', 'persons_rols.person_id', '=', 'persons.id')
             ->leftJoin('rols', 'persons_rols.rol_id', '=', 'rols.id')
-            ->whereBetween('persons_checks.moment', [$dstar, $dend]);
+            ->leftJoin('motives', 'persons_checks.motive_id', '=', 'motives.id')
+            ->whereBetween('persons_checks.moment', [$filters['dstar'], $filters['dend']]);
 
-        if ($person_id > 0)
-            $datos->where('persons.id', $person_id);
-        if ($division > 0)
-            $datos->where('persons_checks.division_id', $division);
-        if ($rol > 0)
-            $datos->where('rols.id', $rol);
+        if ($filters['person'] > 0)
+            $query->where('persons.id', $filters['person']);
+        if ($filters['division'] > 0)
+            $query->where('persons_checks.division_id', $filters['division']);
+        if ($filters['rol'] > 0)
+            $query->where('rols.id', $filters['rol']);
 
-        $total = (clone $datos)->count();
+        return $query;
+    }
 
-        $data = $datos->select(
-            'persons_checks.id as check_id',
-            'persons.names',
-            'persons.token',
-            'divisions.names as div',
-            'rols.rol',
-            'persons_checks.moment_enter',
-            'persons_checks.moment_exit'
-        )->orderBy('persons.token')
-            ->orderBy('persons_checks.id', 'desc')
-            ->skip($skip)->take($request['take'])->get();
-
+    private function parseList($data, &$otros_tokens)
+    {
         $list = [];
 
         foreach ($data as $registro) {
@@ -77,72 +60,105 @@ class ReportController extends Controller
             $salida = $registro->moment_exit ? Carbon::parse($registro->moment_exit) : null;
             $horas = ($entrada && $salida) ? $entrada->diff($salida)->format('%H:%I:%S') : '0:00';
 
+            if ($registro->motive_id > 0 && $entrada && $salida) {
+                $seconds = $entrada->diffInSeconds($salida);
+                if (!isset($otros_tokens[$registro->token]))
+                    $otros_tokens[$registro->token] = 0;
+                $otros_tokens[$registro->token] += $seconds;
+            }
+
             $list[] = [
                 'id' => $registro->check_id,
                 'names' => $registro->names,
                 'token' => $registro->token,
                 'div' => $registro->div,
                 'rol' => $registro->rol,
-                'moment_enter' => $registro->moment_enter ? Carbon::parse($registro->moment_enter)->toIso8601String() : null,
-                'moment_exit' => $registro->moment_exit ? Carbon::parse($registro->moment_exit)->toIso8601String() : null,
-                'hours' => $horas
+                'moment_enter' => $registro->moment_enter ? $entrada->toIso8601String() : null,
+                'moment_exit' => $registro->moment_exit ? $salida->toIso8601String() : null,
+                'hours' => $horas,
+                'motive_id' => $registro->motive_id,
+                'note' => $registro->note,
             ];
         }
 
-        $result = [
+        return $list;
+    }
+
+    public function getList(Request $request)
+    {
+        $page = (int) $request->input('start', 0);
+        $take = (int) $request->input('take', 12);
+        $filters = $request->input('filters', true);
+        $priorizar_otros = $request->has('priorizar_otros') ? filter_var($request->input('priorizar_otros'), FILTER_VALIDATE_BOOLEAN) : null;
+
+        $otros_tokens = [];
+        $baseQuery = $this->getBaseQuery($filters);
+
+        $allData = $baseQuery->select(
+            'persons_checks.id as check_id',
+            'persons.names',
+            'persons.token',
+            'divisions.names as div',
+            'rols.rol',
+            'persons_checks.moment_enter',
+            'persons_checks.moment_exit',
+            'persons_checks.motive_id',
+            'persons_checks.note'
+        )->orderBy('persons.token')->orderBy('persons_checks.id')->get();
+
+        $grupos = $allData->groupBy(fn($r) => $r->token ?? $r->person_id);
+
+        $ordenados = collect();
+
+        foreach ($grupos as $token => $grupo) {
+            $otros = $grupo->filter(fn($r) => $r->motive_id > 0)->values();
+            $normales = $grupo->filter(fn($r) => $r->motive_id == 0)->values();
+
+            $merged = match ($priorizar_otros) {
+                true => $otros->concat($normales),
+                false => $normales->concat($otros),
+                default => $grupo->sortByDesc('check_id')->values()
+            };
+
+            $ordenados = $ordenados->concat($merged);
+        }
+
+        $total = $ordenados->count();
+
+        $paginado = $ordenados->slice($page * $take, $take)->values();
+
+        $list = $this->parseList($paginado, $otros_tokens);
+
+        $totalesPorToken = $this->getBaseQuery($filters)
+            ->select('persons.token', DB::raw('SUM(TIMESTAMPDIFF(SECOND, moment_enter, moment_exit)) as total_seconds'))
+            ->groupBy('persons.token')
+            ->pluck('total_seconds', 'persons.token')
+            ->toArray();
+
+        $otros_tokens_completos = [];
+        $this->parseList($ordenados, $otros_tokens_completos);
+
+        return response()->json([
             'total' => $total,
             'list' => $list,
             'persons' => Person::select('id', 'names', 'email')->get(),
             'motives' => Motive::all(),
             'rols' => Rol::all(),
             'divisions' => Division::select('id', 'names')->get(),
-        ];
+            'totales_tokens' => collect($totalesPorToken)->map($this->segundosAHoras()),
+            'totales_tokens_otros' => collect($otros_tokens_completos)->map($this->segundosAHoras()),
+            'tokens_finalizados' => $ordenados->pluck('token')->unique()->values()
+        ], 200);
+    }
 
-        // Totales
-        $totalesPorToken = PersonCheck::join('persons', 'persons_checks.person_id', '=', 'persons.id')
-            ->leftJoin('divisions', 'persons_checks.division_id', '=', 'divisions.id')
-            ->leftJoin('persons_rols', 'persons_rols.person_id', '=', 'persons.id')
-            ->leftJoin('rols', 'persons_rols.rol_id', '=', 'rols.id')
-            ->whereBetween('persons_checks.moment', [$dstar, $dend]);
-
-        if ($person_id > 0)
-            $totalesPorToken->where('persons.id', $person_id);
-        if ($division > 0)
-            $totalesPorToken->where('persons_checks.division_id', $division);
-        if ($rol > 0)
-            $totalesPorToken->where('rols.id', $rol);
-
-        $totalesPorToken = $totalesPorToken
-            ->select('persons.token', DB::raw('SUM(TIMESTAMPDIFF(SECOND, moment_enter, moment_exit)) as total_seconds'))
-            ->groupBy('persons.token')
-            ->pluck('total_seconds', 'persons.token')
-            ->toArray();
-
-        $result['totales_tokens'] = collect($totalesPorToken)->map(function ($segundos) {
+    private function segundosAHoras()
+    {
+        return function ($segundos) {
             $h = floor($segundos / 3600);
             $m = floor(($segundos % 3600) / 60);
             $s = $segundos % 60;
             return sprintf('%02d:%02d:%02d', $h, $m, $s);
-        });
-
-        $idsPorToken = PersonCheck::join('persons', 'persons_checks.person_id', '=', 'persons.id')
-            ->whereBetween('persons_checks.moment', [$dstar, $dend]);
-
-        if ($person_id > 0)
-            $idsPorToken->where('persons.id', $person_id);
-        if ($division > 0)
-            $idsPorToken->where('persons_checks.division_id', $division);
-        if ($rol > 0)
-            $idsPorToken->where('rols.id', $rol);
-
-        $result['tokens_finalizados'] = $idsPorToken
-            ->select('persons.token', DB::raw('MAX(persons_checks.id) as max_id'))
-            ->groupBy('persons.token')
-            ->pluck('max_id', 'persons.token')
-            ->keys()
-            ->toArray();
-
-        return response()->json($result, 200);
+        };
     }
 
     private function getRawList($filters): array
@@ -157,6 +173,7 @@ class ReportController extends Controller
             ->leftJoin('divisions', 'persons_checks.division_id', '=', 'divisions.id')
             ->leftJoin('persons_rols', 'persons_rols.person_id', '=', 'persons.id')
             ->leftJoin('rols', 'persons_rols.rol_id', '=', 'rols.id')
+            ->leftJoin('motives', 'persons_checks.motive_id', '=', 'motives.id')
             ->whereBetween('persons_checks.moment', [$dstar, $dend]);
 
         if ($person_id > 0)
@@ -172,7 +189,10 @@ class ReportController extends Controller
             'divisions.names as div',
             'rols.rol',
             'persons_checks.moment_enter',
-            'persons_checks.moment_exit'
+            'persons_checks.moment_exit',
+            'persons_checks.motive_id',
+            'persons_checks.note',
+            'motives.motive as motive_name'
         )->orderBy('persons.token')
             ->orderBy('persons_checks.id', 'desc')
             ->get();
@@ -194,10 +214,28 @@ class ReportController extends Controller
                 'moment_exit' => $registro->moment_exit,
                 'hours' => sprintf('%02d:%02d:%02d', floor($diff / 3600), floor(($diff % 3600) / 60), $diff % 60),
                 'seconds' => $diff,
+                'note' => $registro->note,
+                'motive_id' => $registro->motive_id,
+                'motive_name' => $registro->motive_name ?? '',
             ];
         }
 
         return $list;
+    }
+
+    private function getTotalesOtros($agrupados)
+    {
+        return collect($agrupados)->map(function ($items) {
+            $segundos = collect($items)->reduce(function ($acc, $item) {
+                if (($item['motive_id'] ?? 0) > 0 && !empty($item['moment_enter']) && !empty($item['moment_exit'])) {
+                    $start = \Carbon\Carbon::parse($item['moment_enter']);
+                    $end = \Carbon\Carbon::parse($item['moment_exit']);
+                    return $acc + $start->diffInSeconds($end);
+                }
+                return $acc;
+            }, 0);
+            return sprintf('%02d:%02d:%02d', floor($segundos / 3600), floor(($segundos % 3600) / 60), $segundos % 60);
+        })->toArray();
     }
 
     public function pdf(Request $request)
@@ -228,6 +266,10 @@ class ReportController extends Controller
             'company' => Company::first(),
             'agrupados' => $agrupados,
             'totales' => $resumen,
+            'totales_otros' => $this->getTotalesOtros($agrupados),
+            'columns' => ['div', 'rol', 'token', 'names', 'moment_enter', 'moment_exit', 'hours', 'note', 'motive_name', 'is_otros'],
+            'columns_originales' => ['div', 'rol', 'token', 'names', 'moment_enter', 'moment_exit', 'hours', 'note', 'motive_name', 'is_otros'],
+            'is_solo_otros' => false,
         ];
 
         $pdf = Pdf::loadView('reports.pdf', $data);
@@ -245,7 +287,6 @@ class ReportController extends Controller
 
         $list = $this->generateList($filters);
         return \Excel::download(new PersonCheckXls($list), 'reporte.xlsx');
-
     }
 
     private function generateList($filters)
@@ -260,6 +301,7 @@ class ReportController extends Controller
             ->leftJoin('divisions', 'persons_checks.division_id', '=', 'divisions.id')
             ->leftJoin('persons_rols', 'persons_rols.person_id', '=', 'persons.id')
             ->leftJoin('rols', 'persons_rols.rol_id', '=', 'rols.id')
+            ->leftJoin('motives', 'persons_checks.motive_id', '=', 'motives.id')
             ->whereBetween('persons_checks.moment', [$dstar, $dend]);
 
         if ($person_id > 0)
@@ -275,7 +317,10 @@ class ReportController extends Controller
             'divisions.names as div',
             'rols.rol',
             'persons_checks.moment_enter',
-            'persons_checks.moment_exit'
+            'persons_checks.moment_exit',
+            'persons_checks.motive_id',
+            'persons_checks.note',
+            'motives.motive as motive_name'
         )->orderBy('persons.token')
             ->orderBy('persons_checks.id', 'desc')
             ->get();
@@ -301,7 +346,11 @@ class ReportController extends Controller
                 'rol' => $registro->rol,
                 'moment_enter' => $registro->moment_enter ? Carbon::parse($registro->moment_enter)->toIso8601String() : null,
                 'moment_exit' => $registro->moment_exit ? Carbon::parse($registro->moment_exit)->toIso8601String() : null,
-                'hours' => $horas
+                'hours' => $horas,
+                'note' => $registro->note,
+                'motive_id' => $registro->motive_id,
+                'is_otros' => ($registro->motive_id ?? 0) > 0 ? 'Sí' : 'No',
+                'motive_name' => $registro->motive_name ?? '',
             ];
         }
 

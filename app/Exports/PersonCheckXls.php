@@ -14,34 +14,29 @@ class PersonCheckXls implements WithMultipleSheets
     {
         $this->list = $list;
         $this->isCustom = $isCustom;
+
         $this->columns = $columns ?? [
-            'division',
-            'role',
+            'div',
+            'rol',
             'token',
-            'name',
+            'names',
             'moment_enter',
             'moment_exit',
-            'hours'
+            'hours',
+            'note',
+            'motive_name',
         ];
-    }
-
-    protected function mapColumns($columns)
-    {
-        return $columns;
     }
 
     public function sheets(): array
     {
         $agrupados = collect($this->list)->groupBy('token');
-        $columns = $this->isCustom ? $this->mapColumns($this->columns) : $this->columns;
-
         $sheets = [];
 
         foreach ($agrupados as $token => $registros) {
-            $sheets[] = new PersonCheckPerUserSheet($token, $registros, $columns);
+            $sheets[] = new PersonCheckPerUserSheet($token, $registros, $this->columns);
         }
 
         return $sheets;
     }
 }
-

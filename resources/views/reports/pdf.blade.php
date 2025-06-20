@@ -1,6 +1,20 @@
 @php
-    $columns = $columns ?? ['div', 'rol', 'token', 'names', 'moment_enter', 'moment_exit', 'hours'];
+    $columns_originales = $columns_originales ?? $columns;
+    $columnMap = [
+        'division' => 'div',
+        'role' => 'rol',
+        'name' => 'names',
+        'token' => 'token',
+        'moment_enter' => 'moment_enter',
+        'moment_exit' => 'moment_exit',
+        'hours' => 'hours',
+        'is_otros' => 'is_otros',
+        'note' => 'note',
+        'motive_name' => 'motive_name',
+    ];
+    $columns = collect($columns)->map(fn($c) => $columnMap[$c] ?? $c)->toArray();
 @endphp
+
 
 <!doctype html>
 <html lang="es">
@@ -104,61 +118,135 @@
     </div>
 
     @foreach($agrupados as $token => $registros)
-        <h3 style="margin-top: 25px;">Usuario: {{ $token }}</h3>
-        <table>
-            <thead>
-                <tr>
-                    @if(in_array('div', $columns))
-                    <th>Sucursal</th> @endif
-                    @if(in_array('rol', $columns))
-                    <th>Rol</th> @endif
-                    @if(in_array('token', $columns))
-                    <th>Código</th> @endif
-                    @if(in_array('names', $columns))
-                    <th>Nombre</th> @endif
-                    @if(in_array('moment_enter', $columns))
-                    <th>Entrada</th> @endif
-                    @if(in_array('moment_exit', $columns))
-                    <th>Salida</th> @endif
-                    @if(in_array('hours', $columns))
-                    <th>Horas</th> @endif
+        @php
+            $registros = collect($registros);
+            $normales = !$is_solo_otros ? $registros->filter(fn($r) => ($r['motive_id'] ?? 0) == 0) : collect();
+            $otros = $registros->filter(fn($r) => ($r['motive_id'] ?? 0) > 0);
+        @endphp
+
+        @if(!$is_solo_otros && $normales->count())
+            <table style="width: 100%; margin-top: 25px; margin-bottom: 5px;">
+                <tr style="font-size: 13px; font-weight: bold;">
+                    <td><strong>ENTRADA NORMALES — Usuario: {{ $token }}</strong></td>
+                    <td style="text-align: right;"><strong>Total horas acumuladas:</strong></td>
+                    <td style="text-align: left;"><strong>{{ $totales[$token] ?? '00:00:00' }}</strong></td>
                 </tr>
-            </thead>
-            <tbody>
-                @foreach($registros as $ls)
+            </table>
+
+            <table>
+                <thead>
                     <tr>
                         @if(in_array('div', $columns))
-                        <td>{{ $ls['div'] ?? '' }}</td> @endif
+                        <th>Sucursal</th> @endif
                         @if(in_array('rol', $columns))
-                        <td>{{ $ls['rol'] ?? '' }}</td> @endif
+                        <th>Rol</th> @endif
                         @if(in_array('token', $columns))
-                        <td style="text-align: right;">{{ $ls['token'] ?? '' }}</td> @endif
+                        <th>Código</th> @endif
                         @if(in_array('names', $columns))
-                        <td>{{ $ls['names'] ?? '' }}</td> @endif
+                        <th>Nombre</th> @endif
                         @if(in_array('moment_enter', $columns))
-                            <td style="text-align: center;">
-                                {{ !empty($ls['moment_enter']) ? \Carbon\Carbon::parse($ls['moment_enter'])->format('d/m/Y H:i') : '-' }}
-                            </td>
-                        @endif
+                        <th>Entrada</th> @endif
                         @if(in_array('moment_exit', $columns))
-                            <td style="text-align: center;">
-                                {{ !empty($ls['moment_exit']) ? \Carbon\Carbon::parse($ls['moment_exit'])->format('d/m/Y H:i') : '-' }}
-                            </td>
-                        @endif
+                        <th>Salida</th> @endif
                         @if(in_array('hours', $columns))
-                            <td style="text-align: center;">{{ $ls['hours'] ?? '0:00' }}</td>
-                        @endif
+                        <th>Horas</th> @endif
                     </tr>
-                @endforeach
+                </thead>
+                <tbody>
+                    @foreach($normales as $ls)
+                        <tr>
+                            @if(in_array('div', $columns))
+                            <td>{{ $ls['div'] ?? '' }}</td> @endif
+                            @if(in_array('rol', $columns))
+                            <td>{{ $ls['rol'] ?? '' }}</td> @endif
+                            @if(in_array('token', $columns))
+                            <td style="text-align: right;">{{ $ls['token'] ?? '' }}</td> @endif
+                            @if(in_array('names', $columns))
+                            <td>{{ $ls['names'] ?? '' }}</td> @endif
+                            @if(in_array('moment_enter', $columns))
+                                <td style="text-align: center;">
+                                    {{ !empty($ls['moment_enter']) ? \Carbon\Carbon::parse($ls['moment_enter'])->format('d/m/Y H:i') : '-' }}
+                            </td> @endif
+                            @if(in_array('moment_exit', $columns))
+                                <td style="text-align: center;">
+                                    {{ !empty($ls['moment_exit']) ? \Carbon\Carbon::parse($ls['moment_exit'])->format('d/m/Y H:i') : '-' }}
+                            </td> @endif
+                            @if(in_array('hours', $columns))
+                            <td style="text-align: center;">{{ $ls['hours'] ?? '0:00' }}</td> @endif
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
 
-                <tr class="totales">
-                    <td colspan="{{ count($columns) - 1 }}" style="text-align: right;">Total horas acumuladas:</td>
-                    <td style="text-align: center;">{{ $totales[$token] ?? '0:00' }}</td>
+        @if(in_array('is_otros', $columns_originales) && $otros->count())
+            <table style="width: 100%; margin-top: 25px; margin-bottom: 5px;">
+                <tr style="color: red; font-size: 13px; font-weight: bold;">
+                    <td><strong>ENTRADAS CON MOTIVO</strong></td>
+                    <td style="text-align: right;"><strong>Total horas acumuladas:</strong></td>
+                    <td style="text-align: left;">
+                        <strong>{{ $totales_otros[$token] ?? '00:00:00' }}</strong>
+                    </td>
                 </tr>
-            </tbody>
-        </table>
-    @endforeach
+            </table>
 
+            <table>
+                <thead>
+                    <tr>
+                        @if(in_array('div', $columns))
+                        <th>Sucursal</th> @endif
+                        @if(in_array('rol', $columns))
+                        <th>Rol</th> @endif
+                        @if(in_array('token', $columns))
+                        <th>Código</th> @endif
+                        @if(in_array('names', $columns))
+                        <th>Nombre</th> @endif
+                        @if(in_array('moment_enter', $columns))
+                        <th>Entrada</th> @endif
+                        @if(in_array('moment_exit', $columns))
+                        <th>Salida</th> @endif
+                        @if(in_array('hours', $columns))
+                        <th>Horas</th> @endif
+                        @if(in_array('motive_name', $columns))
+                        <th>Motivo</th> @endif
+                        @if(in_array('note', $columns))
+                        <th>Nota</th> @endif
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($otros as $ls)
+                        <tr style="color: red;">
+                            @if(in_array('div', $columns))
+                            <td>{{ $ls['div'] ?? '' }}</td> @endif
+                            @if(in_array('rol', $columns))
+                            <td>{{ $ls['rol'] ?? '' }}</td> @endif
+                            @if(in_array('token', $columns))
+                            <td style="text-align: right;">{{ $ls['token'] ?? '' }}</td> @endif
+                            @if(in_array('names', $columns))
+                            <td>{{ $ls['names'] ?? '' }}</td> @endif
+                            @if(in_array('moment_enter', $columns))
+                                <td style="text-align: center;">
+                                    {{ !empty($ls['moment_enter']) ? \Carbon\Carbon::parse($ls['moment_enter'])->format('d/m/Y H:i') : '-' }}
+                                </td>
+                            @endif
+                            @if(in_array('moment_exit', $columns))
+                                <td style="text-align: center;">
+                                    {{ !empty($ls['moment_exit']) ? \Carbon\Carbon::parse($ls['moment_exit'])->format('d/m/Y H:i') : '-' }}
+                                </td>
+                            @endif
+                            @if(in_array('hours', $columns))
+                            <td style="text-align: center;">{{ $ls['hours'] ?? '0:00' }}</td> @endif
+                            @if(in_array('motive_name', $columns))
+                            <td>{{ $ls['motive_name'] ?? '-' }}</td> @endif
+                            @if(in_array('note', $columns))
+                            <td>{{ $ls['note'] ?? '' }}</td> @endif
+                        </tr>
+                    @endforeach
+                </tbody>
+
+            </table>
+        @endif
+    @endforeach
 </body>
 
 </html>

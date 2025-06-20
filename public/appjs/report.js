@@ -6,6 +6,9 @@ new Vue({
     el: '#app',
     data() {
         return {
+            totales_tokens_otros: {},
+            priorizar_otros: null,
+            showOtrosFirst: false,
             userSearch: '',
             start_date: null,
             totales_tokens: {},
@@ -18,6 +21,7 @@ new Vue({
             spin: false,
             act: 'post',
             lists: [],
+            motives: [],
             views: {
                 list: true,
                 new: false,
@@ -115,6 +119,11 @@ new Vue({
     },
 
     methods: {
+        getMotiveName(id) {
+            const mot = this.motives.find(m => m.id == id);
+            return mot ? mot.motive : '-';
+        },
+
         totalHoras(group) {
             let total = 0;
             group.forEach(item => {
@@ -226,48 +235,127 @@ new Vue({
 
             this.spin = true;
 
+            const params = {
+                start: this.pager.page - 1,
+                take: this.pager.recordpage,
+                filters: this.filters,
+                orders: this.orders,
+            };
+
+            if (this.priorizar_otros !== null) {
+                params.priorizar_otros = this.priorizar_otros;
+            }
+
             axios({
                 method: 'get',
-
                 url: urldomine + 'api/reports/list',
-
-                params: { start: this.pager.page - 1, take: this.pager.recordpage, filters: this.filters, orders: this.orders }
-
+                params: params
             }).then(response => {
-
                 this.spin = false;
 
                 this.lists = response.data.list;
-
                 this.divisions = response.data.divisions;
-
                 this.rols = response.data.rols;
-
                 this.persons = response.data.persons;
-
                 this.totalpage = Math.ceil(response.data.total / this.pager.recordpage);
-
                 this.totales_tokens = response.data.totales_tokens || {};
-
                 this.tokens_finalizados = response.data.tokens_finalizados || [];
+                this.motives = response.data.motives;
+                this.totales_tokens_otros = response.data.totales_tokens_otros;
 
             }).catch(e => {
-
                 this.spin = false;
-
                 this.$toasted.show(e.response.data, toast_options);
-            })
+            });
         }
     },
     computed: {
         groupedLists() {
-            const grouped = {};
+            const agrupados = {};
+
             this.lists.forEach(item => {
-                const key = item.token || item.person_id;
-                if (!grouped[key]) grouped[key] = [];
-                grouped[key].push(item);
+                const token = item.token || item.person_id;
+                if (!agrupados[token]) {
+                    agrupados[token] = { normales: [], otros: [] };
+                }
+
+                if (item.motive_id > 0) {
+                    agrupados[token].otros.push(item);
+                } else {
+                    agrupados[token].normales.push(item);
+                }
             });
-            return grouped;
+
+            const bloques = [];
+
+            Object.keys(agrupados).sort().forEach(token => {
+                const grupo = agrupados[token];
+
+                let ordenados = [];
+                if (this.priorizar_otros === true) {
+                    ordenados = [...grupo.otros, ...grupo.normales];
+                } else if (this.priorizar_otros === false) {
+                    ordenados = [...grupo.normales, ...grupo.otros];
+                } else {
+                    ordenados = [...grupo.normales, ...grupo.otros];
+                }
+
+                if (ordenados.length > 0) {
+                    bloques.push({
+                        esTitulo: true,
+                        token,
+                        nombre: ordenados[0].names,
+                        __key: `titulo-${token}`
+                    });
+
+                    ordenados.forEach(item => {
+                        bloques.push({
+                            ...item,
+                            __key: `${token}-${item.id}-${item.moment_enter || ''}-${item.moment_exit || ''}`
+                        });
+                    });
+                }
+            });
+
+            return bloques;
+        },
+
+        groupedLists() {
+            const agrupados = {};
+
+            this.lists.forEach(item => {
+                const token = item.token || item.person_id;
+
+                if (!agrupados[token]) {
+                    agrupados[token] = {
+                        ordenados: [],
+                        normales: [],
+                        otros: []
+                    };
+                }
+
+                if (item.motive_id > 0) {
+                    agrupados[token].otros.push(item);
+                } else {
+                    agrupados[token].normales.push(item);
+                }
+            });
+
+            Object.values(agrupados).forEach(grupo => {
+                grupo.normales.sort((a, b) => b.id - a.id);
+                grupo.otros.sort((a, b) => b.id - a.id);
+
+                if (this.priorizar_otros === true) {
+                    grupo.ordenados = [...grupo.otros, ...grupo.normales];
+                } else if (this.priorizar_otros === false) {
+                    grupo.ordenados = [...grupo.normales, ...grupo.otros];
+                } else {
+                    // orden natural sin filtrar
+                    grupo.ordenados = [...grupo.normales, ...grupo.otros].sort((a, b) => b.id - a.id);
+                }
+            });
+
+            return agrupados;
         }
     }
 

@@ -51,6 +51,7 @@ new Vue({
                 { id: 'moment_enter', label: 'Entrada' },
                 { id: 'moment_exit', label: 'Salida' },
                 { id: 'hours', label: 'Horas' },
+                { id: 'is_otros', label: '¿OTROS?' },
             ],
             formatSelection: [],
             persons: []
