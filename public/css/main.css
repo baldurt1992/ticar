@@ -201,3 +201,25 @@ option {
 .overflow-persons {
     overflow-x: scroll !important;
 }
+
+#calendar .datepicker {
+    width: 100% !important;
+}
+
+.table-condensed {
+    width: 100% !important;
+}
+
+.main-sidebar .navbar-brand {
+    height: auto;
+}
+
+.main-navbar .navbar {
+    height: auto;
+}
+
+.error-span {
+    position: absolute;
+    top: 0;
+    left: 0;
+}

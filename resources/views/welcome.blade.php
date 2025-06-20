@@ -63,7 +63,7 @@
                         <div
                             class="col-lg-12 col-md-12 col-sm-12 col-xs-12 mt-2 mb-2 d-flex flex-wrap justify-content-center entry-buttons">
                             <button :disabled="user . token . length <= 0" class="btn btn-success btn-lg"
-                                @click="openConfirm('entrada')">ENTRAR</button>
+                                @click="handleEntrada()">ENTRAR</button>
                             <button :disabled="user . token . length <= 0" class="btn btn-danger btn-lg"
                                 @click="openConfirm('salida')">SALIR</button>
                             <button :disabled="!entradaNormalActiva" class="btn btn-warning btn-lg" @click="showOb()"
@@ -72,7 +72,7 @@
         : (pending_check_motive > 0
             ? 'Ya tienes una entrada abierta con motivo ' + getMotivoNombre(pending_check_motive)
             : '')">
-                   OTR
+                                OTROS
                             </button>
 
 
@@ -100,14 +100,8 @@
                         </select>
                         Nota
                         <textarea class="form-control" v-model="user.note" rows="5"></textarea>
-                        <div class="custom-controls-stacked mt-5">
-                            <div v-for="div in divisions" class="custom-control custom-radio mb-3">
-                                <input type="radio" :id="'c' + div . id" name="customRadio" :value="div . id"
-                                    class="custom-control-input" v-model="user.division_id">
-                                <label class="custom-control-label" :for="'c' + div . id">@{{ div.names }}</label>
-                            </div>
-                        </div>
                     </div>
+                    <input type="hidden" v-model="user.division_id">
                     <div class="modal-footer justify-content-between">
                         <button :disabled="user . division_id === 0" @click="actionType = 'entrada'; check()"
                             class="btn btn-success btn-lg w-50">
@@ -119,33 +113,6 @@
             </div>
         </div>
 
-        <div id="div" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
-            aria-hidden="true">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header bg-info">
-                        <h5 class="modal-title" style="color: black" id="exampleModalLabel">Sucursal</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="custom-controls-stacked">
-                            <div v-for="div in divisions" class="custom-control custom-radio mb-3">
-                                <input type="radio" :id="'c1' + div . id" name="customRadio" :value="div . id"
-                                    class="custom-control-input" v-model="user.division_id">
-                                <label class="custom-control-label" :for="'c1' + div . id">@{{ div.names }}</label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button :disabled="user . division_id === 0" @click="check()"
-                            class="btn btn-danger btn-sm">CHEQUEAR</button>
-                        <a href="#" data-dismiss="modal" class="btn btn-default  btn-sm">Cerrar</a>
-                    </div>
-                </div>
-            </div>
-        </div>
         <div id="modal-registro" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
             aria-hidden="true">
             <div class="modal-dialog" role="document">
@@ -204,6 +171,42 @@
                 </div>
             </div>
         </div>
+
+        <div id="modal-entrada" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="modalEntradaLabel"
+            aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content" style="min-height: 40vh;">
+                    <div class="modal-header bg-success">
+                        <h5 class="modal-title text-white" id="modalEntradaLabel">Selecciona la sucursal</h5>
+                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <div v-if="divisions.length > 1">
+                            <p class="text-dark">Tienes varias sucursales asignadas, selecciona a cuál vas a ingresar:
+                            </p>
+                            <div v-for="div in divisions" class="custom-control custom-radio mb-2">
+                                <input type="radio" :id="'divi' + div.id" name="divisionRadio"
+                                    class="custom-control-input" :value="div.id" v-model="user.division_id">
+                                <label class="custom-control-label" :for="'divi' + div.id">@{{ div.names }}</label>
+                            </div>
+                        </div>
+                        <div v-else>
+                            <p class="text-dark" v-if="divisions.length === 1 && divisions[0]">
+                                Solo tienes una sucursal asignada:
+                                <strong>@{{ divisions[0].names }}</strong>
+                            </p>
+
+                            <input type="hidden" v-model="user.division_id">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button :disabled="!user.division_id" @click="actionType = 'entrada'; check()"
+                            class="btn btn-success w-100">Entrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
 

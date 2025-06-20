@@ -4,9 +4,38 @@ namespace App\Http\Controllers;
 
 use App\Company;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class CompanyController extends Controller
 {
+    public function uploadLogo(Request $request)
+    {
+        $request->validate([
+            'logo' => 'required|image|max:5120',
+        ]);
+
+        $company = Company::first();
+
+        if (!$company) {
+            return response()->json(['error' => 'Empresa no encontrada'], 404);
+        }
+
+        if ($company->logo && Storage::disk('public')->exists('logos/' . $company->logo)) {
+            Storage::disk('public')->delete('logos/' . $company->logo);
+        }
+
+        $file = $request->file('logo');
+        $filename = 'logo_' . $company->id . '.' . $file->getClientOriginalExtension();
+        $file->storeAs('logos', $filename, 'public');
+
+        $company->logo = $filename;
+        $company->save();
+
+        return response()->json([
+            'logo_url' => asset('storage/logos/' . $filename)
+        ]);
+    }
+
     public function index()
     {
         return view('company.comp');
