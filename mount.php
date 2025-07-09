@@ -1,15 +1,34 @@
 <?php
 
 chdir(__DIR__);
-echo "⏳ Inicializando Laravel...\n";
+echo "<pre>⏳ Inicializando Laravel...\n";
 
-// Ejecutar Composer
-passthru('~/.phpenv/shims/composer install --no-interaction --prefer-dist');
+// Composer desde ruta absoluta en Plesk
+$composer = '/opt/plesk/php/8.2/bin/php /usr/lib/plesk-9.0/composer.phar';
 
-// Comandos Artisan
-passthru('php artisan migrate --force');
-passthru('php artisan db:seed --force');
-passthru('php artisan config:cache');
+// 1. Instalar dependencias
+echo "📦 Ejecutando composer install...\n";
+passthru("$composer install --no-interaction --prefer-dist");
 
+// 2. Generar APP_KEY si no existe
+$env = file_get_contents('.env');
+if (strpos($env, 'APP_KEY=') !== false && strlen(trim(explode('APP_KEY=', $env)[1])) < 10) {
+    echo "\n🔐 Generando APP_KEY...\n";
+    passthru("php artisan key:generate");
+}
+
+// 3. Migrar base de datos
+echo "\n🧩 Migrando base de datos...\n";
+passthru("php artisan migrate --force");
+
+// 4. Ejecutar seeders
+echo "\n🌱 Ejecutando seeders...\n";
+passthru("php artisan db:seed --force");
+
+// 5. Cachear configuración
+echo "\n🧹 Cacheando config...\n";
+passthru("php artisan config:cache");
+
+// 6. Confirmar
 http_response_code(200);
-echo "✔️ Laravel desplegado y listo\n";
+echo "\n✅ Laravel desplegado y listo</pre>\n";
