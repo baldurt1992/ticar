@@ -4,7 +4,7 @@ chdir(__DIR__);
 echo "<pre>⏳ Inicializando Laravel...\n";
 
 // Composer desde ruta absoluta en Plesk
-$composer = '/opt/plesk/php/8.2/bin/php /usr/lib/plesk-9.0/composer.phar';
+$composer = '/usr/local/bin/composer';
 
 // 1. Instalar dependencias
 echo "📦 Ejecutando composer install...\n";
