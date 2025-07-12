@@ -1,25 +1,20 @@
 <?php
 
+namespace Database\Seeders;
+
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+use App\Models\User;
 
 class AppSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     *
-     * @return void
-     */
-    public function run()
+    public function run(): void
     {
-        \App\User::create([
-
+        User::create([
             'name' => 'administrador',
-
             'email' => 'admin@ch.com',
-
             'status_id' => 1,
-
-            'password' => \Illuminate\Support\Facades\Hash::make('1234')
+            'password' => Hash::make('1234')
         ]);
     }
 }
